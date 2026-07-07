@@ -1,0 +1,301 @@
+.hist-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.hist-header-left h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.hist-header-left p {
+  font-size: 1rem;
+  color: var(--db-text-muted);
+}
+
+.hist-header-right {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hist-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--db-bg-elevated);
+  border: 1px solid var(--db-border);
+  border-radius: 10px;
+  padding: 10px 16px;
+  min-width: 220px;
+}
+
+.hist-search-icon {
+  opacity: 0.6;
+  font-size: 0.9rem;
+}
+
+.hist-search input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--db-text);
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+.hist-search input::placeholder {
+  color: var(--db-text-faint);
+}
+
+.hist-filter {
+  background: var(--db-bg-elevated);
+  border: 1px solid var(--db-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: var(--db-text);
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+  outline: none;
+}
+
+.hist-filter option {
+  background: #0a1522;
+  color: var(--db-text);
+}
+
+/* ===== Stat cards ===== */
+
+.hist-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.hist-stat-card {
+  background: var(--db-bg-elevated);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.hist-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.hist-stat-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.hist-stat-label {
+  font-size: 0.8rem;
+  color: var(--db-text-faint);
+  margin: 2px 0 0;
+}
+
+/* ===== Recent History table ===== */
+
+.hist-table-card {
+  background: var(--db-bg-elevated);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius);
+  padding: 24px;
+}
+
+.hist-table-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.hist-list-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 70px;
+  gap: 12px;
+  padding: 0 14px 10px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--db-text-faint);
+  border-bottom: 1px solid var(--db-border);
+}
+
+.hist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hist-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 70px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.hist-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.hist-row-emotion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+}
+
+.hist-row-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.hist-row-method {
+  font-size: 0.85rem;
+  color: var(--db-text-muted);
+}
+
+.hist-row-time {
+  font-size: 0.82rem;
+  color: var(--db-text-faint);
+}
+
+.hist-actions-col {
+  display: flex;
+  justify-content: center;
+}
+
+.hist-play-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(143, 227, 77, 0.12);
+  color: var(--db-lime);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.hist-play-btn:hover {
+  background: rgba(143, 227, 77, 0.22);
+}
+
+.hist-load-more-btn {
+  padding: 10px 28px;
+  border-radius: 999px;
+  border: 1px solid var(--db-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--db-text);
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hist-load-more-btn:hover {
+  border-color: var(--db-lime);
+  color: var(--db-lime);
+}
+
+.hist-empty-state {
+  font-size: 0.9rem;
+  color: var(--db-text-faint);
+  padding: 20px 4px;
+  line-height: 1.5;
+}
+
+/* ===== Skeletons ===== */
+
+.hist-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+}
+
+.hist-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  animation: hist-shimmer 1.4s infinite;
+}
+
+@keyframes hist-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.hist-skeleton-line {
+  height: 10px;
+  border-radius: 4px;
+}
+
+/* ===== Responsive ===== */
+
+@media (max-width: 900px) {
+  .hist-list-header {
+    display: none;
+  }
+
+  .hist-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    margin-bottom: 8px;
+  }
+
+  .hist-actions-col {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .hist-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hist-header-right {
+    flex-direction: column;
+  }
+
+  .hist-search {
+    min-width: 0;
+  }
+}

@@ -1,0 +1,181 @@
+.isp-modal {
+  background: var(--db-bg-elevated, rgba(9, 20, 34, 0.95));
+  border: 1px solid var(--db-border, rgba(255, 255, 255, 0.1));
+  border-radius: 16px;
+  padding: 28px;
+  max-width: 480px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: modalSlideIn 0.3s ease;
+}
+
+.isp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.isp-header h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.isp-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: var(--db-text-muted, rgba(244, 246, 248, 0.66));
+  cursor: pointer;
+  padding: 4px;
+}
+
+.isp-close-btn:hover {
+  color: var(--db-text, #f4f6f8);
+}
+
+.isp-subtitle {
+  font-size: 0.9rem;
+  color: var(--db-text-muted, rgba(244, 246, 248, 0.66));
+  margin: 0 0 20px;
+}
+
+/* ===== List of Spotify playlists ===== */
+
+.isp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.isp-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--db-border, rgba(255, 255, 255, 0.1));
+  border-radius: 10px;
+}
+
+.isp-item-liked {
+  background: rgba(255, 107, 107, 0.08);
+  border-color: rgba(255, 107, 107, 0.25);
+}
+
+.isp-item-liked .isp-item-art {
+  background-color: rgba(255, 107, 107, 0.15);
+}
+
+.isp-item-art {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background-color: #181818;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.isp-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.isp-item-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.isp-item-count {
+  font-size: 0.78rem;
+  color: var(--db-text-faint, rgba(244, 246, 248, 0.42));
+  margin: 2px 0 0;
+}
+
+.isp-import-btn {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--db-lime, #8fe34d);
+  background: rgba(143, 227, 77, 0.12);
+  color: var(--db-lime, #8fe34d);
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.isp-import-btn:hover:not(:disabled) {
+  background: rgba(143, 227, 77, 0.22);
+}
+
+.isp-import-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== Progress ===== */
+
+.isp-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 30px 10px;
+  text-align: center;
+  color: var(--db-text-muted, rgba(244, 246, 248, 0.66));
+}
+
+.isp-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.isp-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--db-lime, #8fe34d), var(--db-teal, #2dd4bf));
+  transition: width 0.2s ease;
+}
+
+/* ===== Done ===== */
+
+.isp-done {
+  text-align: center;
+  padding: 30px 10px;
+}
+
+.isp-done-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--db-lime, #8fe34d);
+  margin: 0 0 8px;
+}
+
+.isp-done-sub {
+  font-size: 0.9rem;
+  color: var(--db-text-muted, rgba(244, 246, 248, 0.66));
+  margin: 0 0 24px;
+}
+
+@media (max-width: 480px) {
+  .isp-modal {
+    padding: 20px;
+  }
+}
