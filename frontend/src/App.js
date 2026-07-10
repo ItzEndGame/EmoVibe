@@ -7,6 +7,7 @@ import MainApp from './components/EmotionDetection/MainApp';
 import History from './components/History/History';
 import LikedSongs from './components/LikedSongs/LikedSongs';
 import Playlists from './components/Playlists/Playlists';
+import Settings from './components/Settings/Settings';
 import ProfilePage from './components/Profile/ProfilePage';
 import MusicGames from "./pages/MusicGames";
 import LandingPage from './components/LandingPage/LandingPage';
@@ -87,6 +88,9 @@ function App() {
 
           {/* Playlists - replaces the earlier /profile stopgap */}
           <Route path="/app/playlists" element={<Playlists />} />
+
+          {/* Settings - replaces the earlier /profile stopgap */}
+          <Route path="/app/settings" element={<Settings />} />
         </Route>
 
         {/* Music Games */}

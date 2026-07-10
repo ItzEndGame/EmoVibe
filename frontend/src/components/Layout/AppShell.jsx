@@ -86,7 +86,7 @@ const NAV_ITEMS = [
   { id: 'playlists', label: 'Playlists', icon: PlaylistIcon, path: '/app/playlists' },
   { id: 'games', label: 'Games', icon: GamepadIcon, path: '/games' },
   { id: 'profile', label: 'Profile', icon: UserIcon, path: '/profile' },
-  { id: 'settings', label: 'Settings', icon: SettingsIcon, path: '/profile' },
+  { id: 'settings', label: 'Settings', icon: SettingsIcon, path: '/app/settings' },
 ];
 
 // Derives which nav item should be highlighted from the current route,
@@ -96,6 +96,7 @@ const activeNavFor = (pathname) => {
   if (pathname.startsWith('/app/history')) return 'history';
   if (pathname.startsWith('/app/liked')) return 'liked';
   if (pathname.startsWith('/app/playlists')) return 'playlists';
+  if (pathname.startsWith('/app/settings')) return 'settings';
   if (pathname.startsWith('/app')) return 'dashboard'; // covers /app and /app/detect
   if (pathname.startsWith('/games')) return 'games';
   if (pathname.startsWith('/profile')) return 'profile';

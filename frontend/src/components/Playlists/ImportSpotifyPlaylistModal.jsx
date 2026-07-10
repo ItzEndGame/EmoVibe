@@ -24,6 +24,7 @@ const ImportSpotifyPlaylistModal = ({ isOpen, onClose, onImported }) => {
   const [spotifyPlaylists, setSpotifyPlaylists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [likedSongsUnavailable, setLikedSongsUnavailable] = useState(false);
   const [importingId, setImportingId] = useState(null);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [importedName, setImportedName] = useState('');
@@ -32,6 +33,7 @@ const ImportSpotifyPlaylistModal = ({ isOpen, onClose, onImported }) => {
     if (!isOpen) return;
     setStep('list');
     setError('');
+    setLikedSongsUnavailable(false);
     loadSpotifyPlaylists();
   }, [isOpen]);
 
@@ -67,6 +69,15 @@ const ImportSpotifyPlaylistModal = ({ isOpen, onClose, onImported }) => {
           isLikedSongs: true,
           tracks: { total: likedData.total ?? 0 },
         });
+      } else {
+        // Most likely cause: the 'user-library-read' scope wasn't granted
+        // when this account connected (added to SPOTIFY_SCOPES after the
+        // fact) — existing connections need to reconnect for a new scope
+        // to take effect, Spotify won't retroactively add it. Surface this
+        // instead of just quietly not showing Liked Songs with no
+        // explanation.
+        console.warn(`Liked Songs fetch failed (HTTP ${likedRes.status}) — likely missing the user-library-read scope. Reconnecting Spotify may be required.`);
+        setLikedSongsUnavailable(true);
       }
 
       setSpotifyPlaylists(items);
@@ -170,6 +181,13 @@ const ImportSpotifyPlaylistModal = ({ isOpen, onClose, onImported }) => {
         {step === 'list' && (
           <>
             <p className="isp-subtitle">Pick one of your Spotify playlists — or your Liked Songs — to bring it into EmoVibe.</p>
+
+            {likedSongsUnavailable && (
+              <div className="isp-scope-note">
+                Liked Songs isn't available right now — this app needs an extra Spotify permission that wasn't
+                granted when you connected. <strong>Disconnect and reconnect Spotify</strong> to enable it.
+              </div>
+            )}
 
             {error && <div className="pl-error-message">{error}</div>}
 

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { emotionAPI, musicAPI } from '../../services/api';
+import { emotionAPI, musicAPI, preferencesAPI } from '../../services/api';
 import SpotifyConnectBanner from '../Spotify/SpotifyConnectBanner';
 import { useListeningHeartbeat } from '../Spotify/useListeningHeartbeat';
 import CurrentlyPlayingBar from '../Spotify/CurrentlyPlayingBar';
@@ -77,6 +77,20 @@ const MainApp = () => {
 
     return () => clearTimeout(timer);
   }, [visibleCount, recommendations.length]);
+
+  // Autoplay preference: start the first recommendation automatically once
+  // a fresh batch loads, but only if nothing is already playing — this
+  // naturally fires once per detection (currentTrack is null right after
+  // a mood is selected) and won't re-trigger on "Load More" appends, since
+  // currentTrack is no longer null by then.
+  useEffect(() => {
+    if (autoplay && !currentTrack && recommendations.length > 0) {
+      const first = recommendations[0];
+      startTracking(first.id);
+      setCurrentTrack({ ...first, spotify_uri: `spotify:track:${first.id}` });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recommendations, autoplay]);
 
   const emotions = [
     { name: 'happy', emoji: '😊', label: 'Happy' },
@@ -271,34 +285,59 @@ const handleLoadMore = async () => {
   fetchMusicRecommendations(emotionName);
 };
 
-  // The Dashboard's three "Detect Your Emotion" cards, and the emotion
-  // pills below them, all navigate here with router state describing
-  // what the user picked: { method: 'camera' | 'upload' | 'select', emotion? }.
-  // Wire that intent into the flows that already exist on this page,
-  // once on mount, so arriving from the Dashboard actually does something.
+  const [autoplay, setAutoplay] = useState(false);
+
+  // Load saved preferences once on mount. Sequenced before the router-state
+  // effect below (not a separate independent effect) so the very first
+  // recommendations fetch — which can fire synchronously via
+  // handleDirectMoodSelection as soon as this effect runs — already has
+  // the right language instead of racing a still-in-flight preferences
+  // request and using the 'english' default for just that first call.
   useEffect(() => {
-    const navState = location.state;
-    if (!navState?.method) return;
+    let cancelled = false;
 
-    if (navState.method === 'camera') {
-      setShowWebcam(true);
-    } else if (navState.method === 'upload') {
-      fileInputRef.current?.click();
-    } else if (navState.method === 'select' && navState.emotion) {
-      handleDirectMoodSelection(navState.emotion);
-
-      // Dashboard's "Recommended For You" cards pass a specific track along
-      // with the mood — load it straight into the player (Now Playing panel
-      // + bottom bar) instead of just landing on the generic mood results.
-      if (navState.track?.id) {
-        const t = navState.track;
-        startTracking(t.id);
-        setCurrentTrack({ ...t, spotify_uri: `spotify:track:${t.id}` });
+    const init = async () => {
+      try {
+        const res = await preferencesAPI.get();
+        const p = res.preferences || {};
+        if (!cancelled) {
+          if (p.language) setLanguage(p.language);
+          if (typeof p.autoplay === 'boolean') setAutoplay(p.autoplay);
+        }
+      } catch (err) {
+        console.warn('Could not load preferences — using defaults:', err);
       }
-    }
 
-    // Clear the state so a refresh or back-navigation doesn't replay it.
-    navigate(location.pathname, { replace: true, state: {} });
+      if (cancelled) return;
+
+      // ---- Router-state handling (unchanged logic, just sequenced after
+      // preferences load) ----
+      const navState = location.state;
+      if (!navState?.method) return;
+
+      if (navState.method === 'camera') {
+        setShowWebcam(true);
+      } else if (navState.method === 'upload') {
+        fileInputRef.current?.click();
+      } else if (navState.method === 'select' && navState.emotion) {
+        handleDirectMoodSelection(navState.emotion);
+
+        // Dashboard's "Recommended For You" cards pass a specific track along
+        // with the mood — load it straight into the player (Now Playing panel
+        // + bottom bar) instead of just landing on the generic mood results.
+        if (navState.track?.id) {
+          const t = navState.track;
+          startTracking(t.id);
+          setCurrentTrack({ ...t, spotify_uri: `spotify:track:${t.id}` });
+        }
+      }
+
+      // Clear the state so a refresh or back-navigation doesn't replay it.
+      navigate(location.pathname, { replace: true, state: {} });
+    };
+
+    init();
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -700,6 +739,9 @@ const handleSortChange = (e) => {
                       <option value="spanish" style={{ background: '#0a1522', color: '#f4f6f8' }}>🇪🇸 Spanish</option>
                       <option value="korean" style={{ background: '#0a1522', color: '#f4f6f8' }}>🇰🇷 Korean</option>
                       <option value="japanese" style={{ background: '#0a1522', color: '#f4f6f8' }}>🇯🇵 Japanese</option>
+                      <option value="german" style={{ background: '#0a1522', color: '#f4f6f8' }}>🇩🇪 German</option>
+                      <option value="italian" style={{ background: '#0a1522', color: '#f4f6f8' }}>🇮🇹 Italian</option>
+                      <option value="portuguese" style={{ background: '#0a1522', color: '#f4f6f8' }}>🇧🇷 Portuguese</option>
                     </select>
 
                     <select
