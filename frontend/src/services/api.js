@@ -245,6 +245,11 @@ export const emotionAPI = {
     return response.data;
   },
 
+  getLongestStreak: async () => {
+    const response = await api.get('/emotion/longest-streak');
+    return response.data;
+  },
+
   test: async () => {
     const response = await axios.get(`${API_BASE}/emotion/test`);
     return response.data;

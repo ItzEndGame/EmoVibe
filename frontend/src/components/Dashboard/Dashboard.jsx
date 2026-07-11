@@ -91,6 +91,11 @@ const Dashboard = () => {
   const [unliking, setUnliking] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(null); // plays via the real CurrentlyPlayingBar, not a raw iframe
 
+  // Streaks
+  const [currentStreak, setCurrentStreak] = useState(null);
+  const [longestStreak, setLongestStreak] = useState(null);
+  const [streakLoading, setStreakLoading] = useState(true);
+
   /* ---------------------------- Data fetching ---------------------------- */
 
   const loadRecentDetections = useCallback(async () => {
@@ -180,6 +185,14 @@ const Dashboard = () => {
     loadRecentDetections();
     loadPlaylists();
     loadLastLiked();
+
+    setStreakLoading(true);
+    Promise.allSettled([emotionAPI.getStreak(), emotionAPI.getLongestStreak()])
+      .then(([currentRes, longestRes]) => {
+        if (currentRes.status === 'fulfilled') setCurrentStreak(currentRes.value.day_streak ?? 0);
+        if (longestRes.status === 'fulfilled') setLongestStreak(longestRes.value.longest_streak ?? 0);
+      })
+      .finally(() => setStreakLoading(false));
   }, [loadRecentDetections, loadPlaylists, loadLastLiked]);
 
   /* ------------------------------ Actions ------------------------------ */
@@ -251,6 +264,23 @@ const Dashboard = () => {
           <button className="db-header-btn db-notification" title="Notifications">🔔</button>
         </div>
       </header>
+
+      <div className="db-streak-row">
+        <div className="db-streak-card">
+          <span className="db-streak-icon">🔥</span>
+          <div>
+            <p className="db-streak-value">{streakLoading ? '—' : (currentStreak ?? 0)}</p>
+            <p className="db-streak-label">Current Streak</p>
+          </div>
+        </div>
+        <div className="db-streak-card">
+          <span className="db-streak-icon">🏆</span>
+          <div>
+            <p className="db-streak-value">{streakLoading ? '—' : (longestStreak ?? 0)}</p>
+            <p className="db-streak-label">Highest Streak</p>
+          </div>
+        </div>
+      </div>
 
       <SpotifyConnectBanner />
 

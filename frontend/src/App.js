@@ -5,6 +5,7 @@ import AppShell from './components/Layout/AppShell';
 import Dashboard from './components/Dashboard/Dashboard';
 import MainApp from './components/EmotionDetection/MainApp';
 import History from './components/History/History';
+import SearchSongs from './components/Search/SearchSongs';
 import LikedSongs from './components/LikedSongs/LikedSongs';
 import Playlists from './components/Playlists/Playlists';
 import Settings from './components/Settings/Settings';
@@ -82,6 +83,9 @@ function App() {
 
           {/* History - full detection history, replaces the earlier /profile stopgap */}
           <Route path="/app/history" element={<History />} />
+
+          {/* Search - live song search, plays through the same custom player */}
+          <Route path="/app/search" element={<SearchSongs />} />
 
           {/* Liked Songs - replaces the earlier /profile stopgap */}
           <Route path="/app/liked" element={<LikedSongs />} />

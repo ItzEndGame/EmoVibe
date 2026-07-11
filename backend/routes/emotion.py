@@ -438,6 +438,25 @@ def get_streak():
         return jsonify({'success': False, 'message': 'Internal server error'}), 500
 
 
+@emotion_bp.route('/longest-streak', methods=['GET'])
+@jwt_required()
+def get_longest_streak():
+    """Returns the user's longest-ever consecutive-day detection streak
+    (not just the current one — see /streak for that)."""
+    try:
+        current_user_id = get_jwt_identity()
+        longest = db.get_longest_streak(current_user_id)
+
+        return jsonify({
+            'success': True,
+            'longest_streak': longest
+        }), 200
+
+    except Exception as e:
+        print(f"Error in get_longest_streak: {str(e)}")
+        return jsonify({'success': False, 'message': 'Internal server error'}), 500
+
+
 @emotion_bp.route('/test', methods=['GET'])
 def test_emotion_detection():
     """

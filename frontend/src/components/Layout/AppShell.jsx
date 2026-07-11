@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import './AppShell.css';
 import logo from '../../assets/emovibe-logo.png';
@@ -37,6 +37,13 @@ const HistoryIcon = () => (
 const HeartIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="1.5" />
+  </svg>
+);
+
+const SearchIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+    <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.5" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
   </svg>
 );
 
@@ -82,6 +89,7 @@ const GamepadIcon = () => (
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: GridIcon, path: '/app' },
   { id: 'history', label: 'History', icon: HistoryIcon, path: '/app/history' },
+  { id: 'search', label: 'Search', icon: SearchIcon, path: '/app/search' },
   { id: 'liked', label: 'Liked Songs', icon: HeartIcon, path: '/app/liked' },
   { id: 'playlists', label: 'Playlists', icon: PlaylistIcon, path: '/app/playlists' },
   { id: 'games', label: 'Games', icon: GamepadIcon, path: '/games' },
@@ -94,6 +102,7 @@ const NAV_ITEMS = [
 // on refresh, back/forward navigation, or landing here from a link.
 const activeNavFor = (pathname) => {
   if (pathname.startsWith('/app/history')) return 'history';
+  if (pathname.startsWith('/app/search')) return 'search';
   if (pathname.startsWith('/app/liked')) return 'liked';
   if (pathname.startsWith('/app/playlists')) return 'playlists';
   if (pathname.startsWith('/app/settings')) return 'settings';
@@ -111,10 +120,32 @@ const AppShell = () => {
   const profileImage = typeof window !== 'undefined' ? localStorage.getItem('profileImage') : null;
   const initial = user?.name?.charAt(0).toUpperCase() || 'U';
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
 
   const goTo = (path) => {
     navigate(path);
     setMobileNavOpen(false);
+    setUserMenuOpen(false);
+  };
+
+  // Close the account menu on an outside click, so it behaves like a
+  // normal dropdown instead of staying open until something inside it
+  // is clicked.
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [userMenuOpen]);
+
+  const handleLogout = () => {
+    setUserMenuOpen(false);
+    logout();
   };
 
   return (
@@ -172,8 +203,23 @@ const AppShell = () => {
           </nav>
         </div>
 
-        <div className="db-sidebar-bottom">
-          <div className="db-user-card" onClick={() => goTo('/profile')}>
+        <div className="db-sidebar-bottom" ref={userMenuRef}>
+          {userMenuOpen && (
+            <div className="db-user-menu-dropdown">
+              <button onClick={() => goTo('/profile')}>
+                <UserIcon /> View Profile
+              </button>
+              <button onClick={() => goTo('/app/settings')}>
+                <SettingsIcon /> Settings
+              </button>
+              <div className="db-user-menu-divider" />
+              <button className="db-user-menu-logout" onClick={handleLogout}>
+                Log Out
+              </button>
+            </div>
+          )}
+
+          <div className="db-user-card" onClick={() => setUserMenuOpen((prev) => !prev)}>
             <div className="db-user-avatar">
               {profileImage ? <img src={profileImage} alt={user?.name || 'User'} /> : initial}
             </div>
@@ -181,13 +227,9 @@ const AppShell = () => {
               <p className="db-user-name">{user?.name || 'User'}</p>
               <p className="db-user-email">{user?.email || 'email@example.com'}</p>
             </div>
-            <button
-              className="db-user-menu"
-              onClick={(e) => { e.stopPropagation(); logout(); }}
-              title="Logout"
-            >
-              ⋮
-            </button>
+            <span className="db-user-menu-caret" aria-hidden="true">
+              {userMenuOpen ? '▾' : '▴'}
+            </span>
           </div>
         </div>
       </aside>

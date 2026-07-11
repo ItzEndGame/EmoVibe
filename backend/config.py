@@ -32,7 +32,7 @@ class Config:
     SPOTIFY_REDIRECT_URI = os.getenv('SPOTIFY_REDIRECT_URI', 'http://127.0.0.1:5000/api/auth/spotify/callback')
 
     # Spotify OAuth Scopes (user-level)
-    SPOTIFY_SCOPES = 'user-read-private user-read-email streaming user-modify-playback-state'
+    SPOTIFY_SCOPES = 'user-read-private user-read-email streaming user-modify-playback-state user-library-read'
 
     # Google OAuth Configuration
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')

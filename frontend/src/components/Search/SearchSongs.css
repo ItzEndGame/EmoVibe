@@ -1,0 +1,256 @@
+.search-header {
+  margin-bottom: 24px;
+}
+
+.search-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.search-header p {
+  font-size: 1rem;
+  color: var(--db-text-muted);
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--db-bg-elevated);
+  border: 1px solid var(--db-border);
+  border-radius: 999px;
+  padding: 14px 22px;
+  margin-bottom: 28px;
+  max-width: 560px;
+  color: var(--db-text-muted);
+}
+
+.search-bar input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--db-text);
+  font-family: 'Poppins', sans-serif;
+  font-size: 1rem;
+}
+
+.search-bar input::placeholder {
+  color: var(--db-text-faint);
+}
+
+.search-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-top-color: var(--db-lime);
+  border-radius: 50%;
+  animation: search-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes search-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== Results ===== */
+
+.search-results {
+  max-width: 720px;
+}
+
+.search-empty-state {
+  font-size: 0.9rem;
+  color: var(--db-text-faint);
+  padding: 24px 4px;
+}
+
+.search-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.search-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.search-row-playing {
+  background: rgba(30, 215, 96, 0.08);
+}
+
+.search-row-playing .search-title {
+  color: #1ED760;
+}
+
+.search-art {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background-color: #181818;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.search-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-artist {
+  font-size: 0.8rem;
+  color: var(--db-text-faint);
+  margin: 2px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-play-btn,
+.search-add-btn,
+.search-like-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+}
+
+.search-duration {
+  font-size: 0.78rem;
+  color: var(--db-text-faint);
+  flex-shrink: 0;
+  min-width: 36px;
+  text-align: right;
+}
+
+.search-spotify-link {
+  background: rgba(29, 185, 84, 0.15);
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(29, 185, 84, 0.3);
+  flex-shrink: 0;
+}
+
+.search-play-btn {
+  background: rgba(143, 227, 77, 0.12);
+  color: var(--db-lime);
+}
+
+.search-play-btn:hover {
+  background: rgba(143, 227, 77, 0.22);
+}
+
+.search-play-btn-active {
+  background: #1ED760;
+  color: #04130a;
+}
+
+.search-add-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--db-text);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.search-add-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.search-like-btn {
+  background: none;
+  font-size: 1.1rem;
+}
+
+/* ===== Skeletons ===== */
+
+.search-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+}
+
+.search-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  animation: search-shimmer 1.4s infinite;
+}
+
+@keyframes search-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.search-skeleton-line {
+  height: 10px;
+  border-radius: 4px;
+}
+
+/* ===== Toast ===== */
+
+.search-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: rgba(143, 227, 77, 0.15);
+  border: 1px solid rgba(143, 227, 77, 0.4);
+  backdrop-filter: blur(12px);
+  color: #c2f2a0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.search-toast-error {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ff8787;
+}
+
+/* ===== Responsive ===== */
+
+@media (max-width: 640px) {
+  .search-bar {
+    max-width: none;
+  }
+}

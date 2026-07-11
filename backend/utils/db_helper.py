@@ -526,6 +526,38 @@ class DatabaseHelper:
             print(f"Error computing detection streak: {str(e)}")
             return 0
 
+    def get_longest_streak(self, user_id):
+        """Longest run of consecutive days (ever, not just ending today/
+        yesterday) with at least one detection. Same distinct-dates data
+        as get_detection_streak, but scans the whole history for the
+        longest consecutive run instead of just the trailing one."""
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute('''
+                        SELECT DISTINCT detected_at::date as d
+                        FROM emotion_detections
+                        WHERE user_id = %s
+                        ORDER BY d ASC
+                    ''', (user_id,))
+                    dates = [row[0] for row in cursor.fetchall()]
+
+            if not dates:
+                return 0
+
+            longest = 1
+            current = 1
+            for i in range(1, len(dates)):
+                if (dates[i] - dates[i - 1]).days == 1:
+                    current += 1
+                    longest = max(longest, current)
+                else:
+                    current = 1
+            return longest
+        except Exception as e:
+            print(f"Error computing longest streak: {str(e)}")
+            return 0
+
     # ==================== USER PLAYLISTS ====================
 
     def create_playlist(self, user_id, name, description=None, cover_image_url=None):
