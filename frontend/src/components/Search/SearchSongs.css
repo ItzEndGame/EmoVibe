@@ -22,7 +22,6 @@
   border-radius: 999px;
   padding: 14px 22px;
   margin-bottom: 28px;
-  max-width: 560px;
   color: var(--db-text-muted);
 }
 
@@ -56,9 +55,7 @@
 
 /* ===== Results ===== */
 
-.search-results {
-  max-width: 720px;
-}
+/* search-results now stretches to fill available width (no max-width cap) */
 
 .search-empty-state {
   font-size: 0.9rem;

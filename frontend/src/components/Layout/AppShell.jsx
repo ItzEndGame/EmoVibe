@@ -93,8 +93,6 @@ const NAV_ITEMS = [
   { id: 'liked', label: 'Liked Songs', icon: HeartIcon, path: '/app/liked' },
   { id: 'playlists', label: 'Playlists', icon: PlaylistIcon, path: '/app/playlists' },
   { id: 'games', label: 'Games', icon: GamepadIcon, path: '/games' },
-  { id: 'profile', label: 'Profile', icon: UserIcon, path: '/profile' },
-  { id: 'settings', label: 'Settings', icon: SettingsIcon, path: '/app/settings' },
 ];
 
 // Derives which nav item should be highlighted from the current route,
@@ -219,17 +217,23 @@ const AppShell = () => {
             </div>
           )}
 
-          <div className="db-user-card" onClick={() => setUserMenuOpen((prev) => !prev)}>
-            <div className="db-user-avatar">
-              {profileImage ? <img src={profileImage} alt={user?.name || 'User'} /> : initial}
+          <div className="db-user-card">
+            <div className="db-user-clickable" onClick={() => goTo('/profile')} title="View Profile">
+              <div className="db-user-avatar">
+                {profileImage ? <img src={profileImage} alt={user?.name || 'User'} /> : initial}
+              </div>
+              <div className="db-user-info">
+                <p className="db-user-name">{user?.name || 'User'}</p>
+                <p className="db-user-email">{user?.email || 'email@example.com'}</p>
+              </div>
             </div>
-            <div className="db-user-info">
-              <p className="db-user-name">{user?.name || 'User'}</p>
-              <p className="db-user-email">{user?.email || 'email@example.com'}</p>
-            </div>
-            <span className="db-user-menu-caret" aria-hidden="true">
+            <button
+              className="db-user-menu-caret"
+              onClick={(e) => { e.stopPropagation(); setUserMenuOpen((prev) => !prev); }}
+              aria-label="Account menu"
+            >
               {userMenuOpen ? '▾' : '▴'}
-            </span>
+            </button>
           </div>
         </div>
       </aside>

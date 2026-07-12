@@ -27,6 +27,7 @@ const MainApp = () => {
   const [isFallbackData, setIsFallbackData] = useState(false);
   const [selectedMood, setSelectedMood] = useState(null);
   const [language, setLanguage] = useState('english');
+  const [autoplay, setAutoplay] = useState(false);
   const [error, setError] = useState('');
   const [loadingMusic, setLoadingMusic] = useState(false);
   const [showWebcam, setShowWebcam] = useState(false);
@@ -284,8 +285,6 @@ const handleLoadMore = async () => {
   
   fetchMusicRecommendations(emotionName);
 };
-
-  const [autoplay, setAutoplay] = useState(false);
 
   // Load saved preferences once on mount. Sequenced before the router-state
   // effect below (not a separate independent effect) so the very first

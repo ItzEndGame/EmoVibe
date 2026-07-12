@@ -95,6 +95,9 @@ function App() {
 
           {/* Settings - replaces the earlier /profile stopgap */}
           <Route path="/app/settings" element={<Settings />} />
+
+          {/* User Profile - nested here so it renders inside AppShell's sidebar layout */}
+          <Route path="/profile" element={<ProfilePage />} />
         </Route>
 
         {/* Music Games */}
@@ -105,16 +108,6 @@ function App() {
               <MusicGames />
             </ProtectedRoute>
           }
-        />
-
-        {/* User Profile */}
-        <Route 
-          path="/profile" 
-          element={
-            <ProtectedRoute>
-              <ProfilePage />
-            </ProtectedRoute>
-          } 
         />
 
         {/* 404 Route */}

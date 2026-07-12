@@ -124,17 +124,25 @@ html, body, #root {
 .db-user-card {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   padding: 10px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--db-border);
   border-radius: 10px;
-  cursor: pointer;
   transition: background 0.2s ease;
 }
 
 .db-user-card:hover {
   background: rgba(255, 255, 255, 0.08);
+}
+
+.db-user-clickable {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
 }
 
 .db-user-avatar {
@@ -185,6 +193,17 @@ html, body, #root {
   font-size: 0.7rem;
   color: var(--db-text-faint);
   flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.db-user-menu-caret:hover {
+  color: var(--db-text);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .db-sidebar-bottom {

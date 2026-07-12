@@ -21,6 +21,7 @@
 .db-header-right {
   display: flex;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .db-header-btn {
@@ -637,9 +638,17 @@
 
 @media (max-width: 768px) {
   .db-header {
-    flex-direction: column;
-    gap: 16px;
+    flex-direction: row;
     align-items: flex-start;
+    gap: 12px;
+  }
+
+  .db-header-left {
+    min-width: 0;
+  }
+
+  .db-header-left h1 {
+    font-size: 1.4rem;
   }
 
   .db-right-section {
