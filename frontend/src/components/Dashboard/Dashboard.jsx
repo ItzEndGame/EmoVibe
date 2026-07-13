@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
-import { emotionAPI, musicAPI, getUser } from '../../services/api';
+import { emotionAPI, musicAPI,notificationsAPI, getUser } from '../../services/api';
 import CurrentlyPlayingBar from '../Spotify/CurrentlyPlayingBar';
 import { useListeningHeartbeat } from '../Spotify/useListeningHeartbeat';
 import SpotifyConnectBanner from '../Spotify/SpotifyConnectBanner';
@@ -95,6 +95,9 @@ const Dashboard = () => {
   const [currentStreak, setCurrentStreak] = useState(null);
   const [longestStreak, setLongestStreak] = useState(null);
   const [streakLoading, setStreakLoading] = useState(true);
+
+  // Notification bell badge
+  const [unreadCount, setUnreadCount] = useState(0);
 
   /* ---------------------------- Data fetching ---------------------------- */
 
@@ -195,6 +198,26 @@ const Dashboard = () => {
       .finally(() => setStreakLoading(false));
   }, [loadRecentDetections, loadPlaylists, loadLastLiked]);
 
+  // Notification bell badge — load on mount, then refresh periodically and
+  // whenever the tab regains focus (covers "left the tab open, streak
+  // milestone happened elsewhere"), without needing a live socket.
+  useEffect(() => {
+    const loadUnreadCount = () => {
+      notificationsAPI.getUnreadCount()
+        .then((res) => setUnreadCount(res.unread_count ?? 0))
+        .catch((err) => console.error('Failed to load unread notification count:', err));
+    };
+
+    loadUnreadCount();
+    const interval = setInterval(loadUnreadCount, 60000); // refresh every 60s
+    window.addEventListener('focus', loadUnreadCount);
+  
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', loadUnreadCount);
+    };
+  }, []);
+
   /* ------------------------------ Actions ------------------------------ */
 
   const handleDetect = (method) => {
@@ -261,7 +284,16 @@ const Dashboard = () => {
           <p>Let's find the perfect music for your mood.</p>
         </div>
         <div className="db-header-right">
-          <button className="db-header-btn db-notification" title="Notifications">🔔</button>
+          <button
+            className="db-header-btn db-notification"
+            title="Notifications"
+            onClick={() => navigate('/app/notifications')}
+          >
+            🔔
+            {unreadCount > 0 && (
+              <span className="db-notification-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+            )}
+          </button>
         </div>
       </header>
 

@@ -36,13 +36,67 @@
 /* ===== Identity card ===== */
 
 .prof-identity {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
 }
 
 .prof-avatar-wrap {
   display: flex;
-  justify-content: center;
-  margin-bottom: 18px;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Decorative fill for the empty space to the right of the identity block
+   on wide screens — purely visual, no content, hidden on mobile where
+   the card has no spare width to justify it. */
+.prof-identity::before {
+  content: '';
+  position: absolute;
+  right: -140px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 620px;
+  height: 380px;
+  background: radial-gradient(ellipse, rgba(143, 227, 77, 0.14), rgba(45, 212, 191, 0.08) 55%, transparent 72%);
+  border-radius: 50%;
+  filter: blur(10px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.prof-remove-photo-btn {
+  background: none;
+  border: none;
+  color: var(--db-text-faint);
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 2px;
+}
+
+.prof-remove-photo-btn:hover:not(:disabled) {
+  color: #ff6b6b;
+}
+
+.prof-remove-photo-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.prof-identity-info {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .prof-avatar {
@@ -100,8 +154,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 360px;
-  margin: 0 auto;
+  max-width: 400px;
 }
 
 .prof-edit-form input {
@@ -126,7 +179,7 @@
 }
 
 .prof-edit-actions button {
-  flex: 1;
+  flex: 0 0 auto;
 }
 
 /* ===== Buttons ===== */
@@ -323,6 +376,24 @@
 @media (max-width: 640px) {
   .prof-card {
     padding: 20px;
+  }
+
+  .prof-identity {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .prof-identity::before {
+    display: none;
+  }
+
+  .prof-identity-info {
+    width: 100%;
+  }
+
+  .prof-edit-form {
+    max-width: none;
+    margin: 0 auto;
   }
 
   .prof-liked-summary {

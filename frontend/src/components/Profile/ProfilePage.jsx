@@ -16,22 +16,15 @@ const EMOTIONS = [
 ];
 const emotionMeta = (name) => EMOTIONS.find((e) => e.name === (name || '').toLowerCase()) || null;
 
-// emotion_breakdown keys come straight from the DB — songs liked before
-// emotion detection ran, or where detection failed, have no emotion on
-// record. That shows up here as an actual `null` key, which JS stringifies
-// to the text "null" once it round-trips through the object — this turns
-// that (and any other unrecognized key) into a readable label instead.
-const emotionDisplayLabel = (name) => {
-  const meta = emotionMeta(name);
-  if (meta) return meta.label;
-  if (!name || name === 'null' || name === 'undefined') return 'Unknown';
-  return name;
-};
-
 const profilePictureUrl = (filename) => {
   if (!filename) return null;
   return `${API_ROOT}/api/user/profile/picture/${filename}`;
 };
+
+// Matches Config.DEFAULT_PROFILE_PICTURE in config.py exactly — used to
+// decide whether "Remove Photo" should show at all (no point offering to
+// remove a photo that's already the default).
+const DEFAULT_PROFILE_PICTURE = 'default_avatar.png';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -41,7 +34,6 @@ const ProfilePage = () => {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -70,7 +62,6 @@ const ProfilePage = () => {
             preferred_genres: res.user.preferred_genres || '',
           });
           localStorage.setItem('user', JSON.stringify(res.user));
-          setPhotoLoadFailed(false);
         }
       })
       .catch((err) => console.error('Failed to refresh profile:', err));
@@ -126,7 +117,6 @@ const ProfilePage = () => {
           localStorage.setItem('user', JSON.stringify(next));
           return next;
         });
-        setPhotoLoadFailed(false);
         showToast('Profile picture updated');
       } else {
         showToast(res.message || 'Failed to upload photo', 'error');
@@ -140,7 +130,30 @@ const ProfilePage = () => {
     }
   };
 
-  const avatarUrl = profilePictureUrl(user?.profile_picture);
+  const handleRemovePhoto = async () => {
+    setUploadingPhoto(true);
+    try {
+      const res = await userAPI.removeProfilePicture();
+      if (res.success) {
+        setUser((prev) => {
+          const next = { ...prev, profile_picture: res.profile_picture };
+          localStorage.setItem('user', JSON.stringify(next));
+          return next;
+        });
+        showToast('Profile picture removed');
+      } else {
+        showToast(res.message || "Couldn't remove photo", 'error');
+      }
+    } catch (err) {
+      console.error('Failed to remove profile picture:', err);
+      showToast('Failed to remove photo. Please try again.', 'error');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const hasCustomPhoto = !!user?.profile_picture && user.profile_picture !== DEFAULT_PROFILE_PICTURE;
+  const avatarUrl = hasCustomPhoto ? profilePictureUrl(user.profile_picture) : null;
 
   return (
     <>
@@ -167,53 +180,56 @@ const ProfilePage = () => {
 
         <div className="prof-avatar-wrap">
           <div className="prof-avatar" onClick={() => fileInputRef.current.click()}>
-            {avatarUrl && !photoLoadFailed ? (
-              <img
-                src={avatarUrl}
-                alt={user?.name || 'Profile'}
-                onError={() => setPhotoLoadFailed(true)}
-              />
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={user?.name || 'Profile'} />
             ) : (
               <span>{user?.name?.charAt(0).toUpperCase() || '👤'}</span>
             )}
             <div className="prof-avatar-overlay">{uploadingPhoto ? '…' : '📷'}</div>
           </div>
+          {hasCustomPhoto && (
+            <button className="prof-remove-photo-btn" onClick={handleRemovePhoto} disabled={uploadingPhoto}>
+              Remove Photo
+            </button>
+          )}
         </div>
 
-        {editing ? (
-          <div className="prof-edit-form">
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Your name"
-            />
-            <input
-              type="text"
-              name="preferred_genres"
-              value={formData.preferred_genres}
-              onChange={handleChange}
-              placeholder="Preferred genres (comma-separated)"
-            />
-            <div className="prof-edit-actions">
-              <button className="prof-btn-secondary" onClick={() => setEditing(false)} disabled={saving}>
-                Cancel
-              </button>
-              <button className="prof-btn-primary" onClick={handleSaveProfile} disabled={saving}>
-                {saving ? 'Saving…' : 'Save'}
-              </button>
+        <div className="prof-identity-info">
+          {editing ? (
+            <div className="prof-edit-form">
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Your name"
+              />
+              <input
+                type="text"
+                name="preferred_genres"
+                value={formData.preferred_genres}
+                onChange={handleChange}
+                placeholder="Preferred genres (comma-separated)"
+              />
+              <div className="prof-edit-actions">
+                <button className="prof-btn-secondary" onClick={() => setEditing(false)} disabled={saving}>
+                  Cancel
+                </button>
+                <button className="prof-btn-primary" onClick={handleSaveProfile} disabled={saving}>
+                  {saving ? 'Saving…' : 'Save'}
+                </button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <>
-            <h2 className="prof-name">{user?.name || 'User'}</h2>
-            <p className="prof-email">{user?.email || 'email@example.com'}</p>
-            <button className="prof-btn-secondary" onClick={() => setEditing(true)}>
-              ✏️ Edit Profile
-            </button>
-          </>
-        )}
+          ) : (
+            <>
+              <h2 className="prof-name">{user?.name || 'User'}</h2>
+              <p className="prof-email">{user?.email || 'email@example.com'}</p>
+              <button className="prof-btn-secondary" onClick={() => setEditing(true)}>
+                ✏️ Edit Profile
+              </button>
+            </>
+          )}
+        </div>
       </section>
 
       {/* ===== Account info ===== */}
@@ -301,7 +317,7 @@ const ProfilePage = () => {
                   <div key={emotion} className="prof-emotion-row">
                     <div className="prof-emotion-label">
                       <span>{meta?.emoji || '🎵'}</span>
-                      <span>{emotionDisplayLabel(emotion)}</span>
+                      <span>{meta?.label || emotion}</span>
                       <span className="prof-emotion-count">{count} song{count === 1 ? '' : 's'}</span>
                     </div>
                     <div className="prof-emotion-bar-track">

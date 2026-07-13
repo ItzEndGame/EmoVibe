@@ -9,6 +9,7 @@ import SearchSongs from './components/Search/SearchSongs';
 import LikedSongs from './components/LikedSongs/LikedSongs';
 import Playlists from './components/Playlists/Playlists';
 import Settings from './components/Settings/Settings';
+import Notifications from './components/Notifications/Notifications';
 import ProfilePage from './components/Profile/ProfilePage';
 import MusicGames from "./pages/MusicGames";
 import LandingPage from './components/LandingPage/LandingPage';
@@ -96,7 +97,10 @@ function App() {
           {/* Settings - replaces the earlier /profile stopgap */}
           <Route path="/app/settings" element={<Settings />} />
 
-          {/* User Profile - nested here so it renders inside AppShell's sidebar layout */}
+          {/* Notifications - streak milestones, Spotify status, etc */}
+          <Route path="/app/notifications" element={<Notifications />} />
+
+          {/* Profile - now inside the shared shell like everything else */}
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
 

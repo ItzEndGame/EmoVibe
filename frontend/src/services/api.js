@@ -384,6 +384,30 @@ export const preferencesAPI = {
   },
 };
 
+// ==================== NOTIFICATIONS ====================
+
+export const notificationsAPI = {
+  getAll: async () => {
+    const response = await api.get('/notifications');
+    return response.data;
+  },
+
+  getUnreadCount: async () => {
+    const response = await api.get('/notifications/unread-count');
+    return response.data;
+  },
+
+  markRead: async (notificationId) => {
+    const response = await api.patch(`/notifications/${notificationId}/read`);
+    return response.data;
+  },
+
+  markAllRead: async () => {
+    const response = await api.patch('/notifications/read-all');
+    return response.data;
+  },
+};
+
 // ==================== USER PROFILE ====================
 
 export const userAPI = {
@@ -406,6 +430,11 @@ export const userAPI = {
         'Content-Type': 'multipart/form-data',
       },
     });
+    return response.data;
+  },
+
+  removeProfilePicture: async () => {
+    const response = await api.delete('/user/profile/picture');
     return response.data;
   },
 
