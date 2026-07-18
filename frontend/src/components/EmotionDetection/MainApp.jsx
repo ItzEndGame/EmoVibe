@@ -2,20 +2,19 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { emotionAPI, musicAPI, preferencesAPI } from '../../services/api';
 import SpotifyConnectBanner from '../Spotify/SpotifyConnectBanner';
-import { useListeningHeartbeat } from '../Spotify/useListeningHeartbeat';
-import CurrentlyPlayingBar from '../Spotify/CurrentlyPlayingBar';
 import WebcamCapture from './WebcamCapture';
 import AddToPlaylistModal from '../Playlists/AddToPlaylistModal';
 import { moodTracker } from '../../utils/moodTracker';
 import { motion } from "framer-motion";
 import { getDummyRecommendations } from './dummyRecommendations';
+import { usePlayer } from '../../context/PlayerContext';
 
 
 
 const MainApp = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { startTracking, stopTracking } = useListeningHeartbeat();
+  const { stopTracking, currentTrack, setCurrentTrack, playTrack } = usePlayer(); // shared with AppShell so playback survives navigating away
   const fileInputRef = useRef(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -37,7 +36,6 @@ const MainApp = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [visibleCount, setVisibleCount] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const [currentTrack, setCurrentTrack] = useState(null); // drives the bottom CurrentlyPlayingBar
   const [sortMode, setSortMode] = useState('popularity'); // 'relevance' | 'popularity'
 
   // Stagger how many track cards (and their Spotify iframes) are actually
@@ -86,9 +84,8 @@ const MainApp = () => {
   // currentTrack is no longer null by then.
   useEffect(() => {
     if (autoplay && !currentTrack && recommendations.length > 0) {
-      const first = recommendations[0];
-      startTracking(first.id);
-      setCurrentTrack({ ...first, spotify_uri: `spotify:track:${first.id}` });
+      const queue = recommendations.map((t) => ({ ...t, spotify_uri: `spotify:track:${t.id}` }));
+      playTrack(queue[0], queue, 0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recommendations, autoplay]);
@@ -326,8 +323,7 @@ const handleLoadMore = async () => {
         // + bottom bar) instead of just landing on the generic mood results.
         if (navState.track?.id) {
           const t = navState.track;
-          startTracking(t.id);
-          setCurrentTrack({ ...t, spotify_uri: `spotify:track:${t.id}` });
+          playTrack({ ...t, spotify_uri: `spotify:track:${t.id}` });
         }
       }
 
@@ -441,31 +437,8 @@ const handleSortChange = (e) => {
     }
   };
 
-  // Steps the bottom player bar to the next/previous track within the
-  // currently-shown recommendations list. Only meaningful for the
-  // non-Premium preview path — Premium/SDK playback has its own
-  // nextTrack/previousTrack via Spotify's queue, handled inside
-  // CurrentlyPlayingBar itself.
-  const handlePlayerNext = () => {
-    if (!currentTrack) return;
-    const idx = recommendations.findIndex((t) => t.id === currentTrack.id);
-    if (idx === -1 || idx === recommendations.length - 1) return;
-    const next = recommendations[idx + 1];
-    setCurrentTrack({ ...next, spotify_uri: `spotify:track:${next.id}` });
-    startTracking(next.id);
-  };
-
-  const handlePlayerPrevious = () => {
-    if (!currentTrack) return;
-    const idx = recommendations.findIndex((t) => t.id === currentTrack.id);
-    if (idx <= 0) return;
-    const prev = recommendations[idx - 1];
-    setCurrentTrack({ ...prev, spotify_uri: `spotify:track:${prev.id}` });
-    startTracking(prev.id);
-  };
-
   return (
-    <div className="me-page" style={currentTrack ? { paddingBottom: '90px' } : undefined}>
+    <div className="me-page">
 
       {/* Toast banner — replaces the old alert() popups for like/unlike
           feedback. Fixed to the top so it never collides with the bottom
@@ -998,8 +971,9 @@ const handleSortChange = (e) => {
               {!isPlaying ? (
                 <button
                   onClick={() => {
-                    startTracking(panelTrack.id);
-                    setCurrentTrack({ ...panelTrack, spotify_uri: `spotify:track:${panelTrack.id}` });
+                    const queue = recommendations.map((t) => ({ ...t, spotify_uri: `spotify:track:${t.id}` }));
+                    const index = recommendations.findIndex((t) => t.id === panelTrack.id);
+                    playTrack({ ...panelTrack, spotify_uri: `spotify:track:${panelTrack.id}` }, queue, index);
                   }}
                   className="btn btn-primary"
                   style={{ width: 'auto', padding: '12px 28px' }}
@@ -1045,8 +1019,9 @@ const handleSortChange = (e) => {
           <div
             key={track.id || index}
             onClick={() => {
-              startTracking(track.id);
-              setCurrentTrack({ ...track, spotify_uri: `spotify:track:${track.id}` });
+              const queue = recommendations.map((t) => ({ ...t, spotify_uri: `spotify:track:${t.id}` }));
+              const index = recommendations.findIndex((t) => t.id === track.id);
+              playTrack({ ...track, spotify_uri: `spotify:track:${track.id}` }, queue, index);
             }}
             style={{
               display: 'flex',
@@ -1190,12 +1165,6 @@ const handleSortChange = (e) => {
     />
   </div>
 )}
-
-<CurrentlyPlayingBar
-  track={currentTrack}
-  onNext={handlePlayerNext}
-  onPrevious={handlePlayerPrevious}
-/>
 
 <AddToPlaylistModal
   isOpen={!!addToPlaylistTrack}

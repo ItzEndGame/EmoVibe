@@ -1,0 +1,87 @@
+.games-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.games-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.games-header p {
+  font-size: 1rem;
+  color: var(--db-text-muted);
+}
+
+.games-back-btn {
+  padding: 9px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--db-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--db-text);
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.games-back-btn:hover {
+  border-color: var(--db-lime);
+  color: var(--db-lime);
+}
+
+/* ===== Game picker grid ===== */
+
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  max-width: 900px;
+}
+
+.games-card {
+  background: var(--db-bg-elevated);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius);
+  padding: 28px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.games-card:hover {
+  border-color: var(--db-lime);
+  background: rgba(143, 227, 77, 0.08);
+}
+
+.games-card-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+}
+
+.games-card h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.games-card p {
+  font-size: 0.85rem;
+  color: var(--db-text-faint);
+  margin: 0;
+}

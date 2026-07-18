@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useSpotifyPlayer } from './useSpotifyPlayer';
+import './CurrentlyPlayingBar.css';
+import { usePlayer } from '../../context/PlayerContext';
 import { musicAPI } from '../../services/api';
 import AddToPlaylistModal from '../Playlists/AddToPlaylistModal';
 
@@ -7,9 +8,10 @@ import AddToPlaylistModal from '../Playlists/AddToPlaylistModal';
  * Bottom "Currently Playing" bar.
  *
  * Premium + Spotify-connected users: real playback via the Web Playback
- * SDK (useSpotifyPlayer) — accurate position/duration, working custom
- * transport controls (prev/play/pause/next), draggable scrubber, all
- * driven by real player_state_changed telemetry.
+ * SDK (shared connection, held in PlayerContext) — accurate
+ * position/duration, working custom transport controls
+ * (prev/play/pause/next), draggable scrubber, all driven by real
+ * player_state_changed telemetry.
  *
  * Everyone else: NOT every track has a preview_url (Spotify doesn't
  * generate one for every song, and that pool has been shrinking), so
@@ -23,12 +25,11 @@ import AddToPlaylistModal from '../Playlists/AddToPlaylistModal';
  * instead we just let the embed be the UI for this path, and only show
  * our custom transport bar where we have genuine control (Premium/SDK).
  *
- * Like + Add-to-Playlist are self-contained here (not passed in as props)
- * so every page that mounts this bar (Dashboard, LikedSongs, Playlists,
- * MainApp) gets them automatically. It fetches the liked-songs list once
- * on mount to know the current track's liked state and DB row id (needed
- * for unlikeSong, which requires the DB id — see MainApp.jsx's fix for
- * why the Spotify track id alone isn't enough).
+ * Like + Add-to-Playlist are self-contained here (not passed in as props).
+ * It fetches the liked-songs list once on mount to know the current
+ * track's liked state and DB row id (needed for unlikeSong, which
+ * requires the DB id — see MainApp.jsx's fix for why the Spotify track
+ * id alone isn't enough).
  */
 const CurrentlyPlayingBar = ({ track, onNext, onPrevious }) => {
   const {
@@ -40,13 +41,48 @@ const CurrentlyPlayingBar = ({ track, onNext, onPrevious }) => {
     nextTrack,
     previousTrack,
     seek,
-  } = useSpotifyPlayer();
+  } = usePlayer().spotify;
 
   const lastLoadedTrackId = useRef(null);
   const usingSdk = isPremium && isReady && track?.spotify_uri;
 
   const [likedMap, setLikedMap] = useState({}); // spotify_track_id -> DB row id
   const [showAddToPlaylist, setShowAddToPlaylist] = useState(false);
+
+  // The SDK's player_state_changed event only fires on play/pause/seek/
+  // track-change — NOT on a steady per-second cadence — so reading
+  // playbackState.position directly leaves the displayed time frozen
+  // between events, then jumping when one finally arrives. Instead, we
+  // snapshot {position, timestamp} from each real event, then advance a
+  // local displayPosition every second based on elapsed wall-clock time,
+  // re-syncing to the real value whenever a fresh event actually lands.
+  const [displayPosition, setDisplayPosition] = useState(0);
+  const positionAnchorRef = useRef({ position: 0, timestamp: Date.now(), paused: true });
+
+  useEffect(() => {
+    if (!playbackState) return;
+    positionAnchorRef.current = {
+      position: playbackState.position ?? 0,
+      timestamp: Date.now(),
+      paused: !!playbackState.paused,
+    };
+    setDisplayPosition(playbackState.position ?? 0);
+  }, [playbackState]);
+
+  useEffect(() => {
+    if (!usingSdk) return;
+
+    const tick = () => {
+      const anchor = positionAnchorRef.current;
+      if (anchor.paused) return;
+      const elapsed = Date.now() - anchor.timestamp;
+      const duration = playbackState?.duration ?? Infinity;
+      setDisplayPosition(Math.min(anchor.position + elapsed, duration));
+    };
+
+    const intervalId = setInterval(tick, 250);
+    return () => clearInterval(intervalId);
+  }, [usingSdk, playbackState?.duration]);
 
   useEffect(() => {
     musicAPI.getLikedSongs()
@@ -142,15 +178,8 @@ const CurrentlyPlayingBar = ({ track, onNext, onPrevious }) => {
   return (
     <>
     <div
+      className="db-player-bar"
       style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 100,
-        background: 'rgba(10, 14, 39, 0.97)',
-        backdropFilter: 'blur(16px)',
-        borderTop: '1px solid var(--glass-border)',
         padding: usingSdk ? '12px 24px' : '8px 24px',
         display: 'flex',
         alignItems: 'center',
@@ -198,14 +227,27 @@ const CurrentlyPlayingBar = ({ track, onNext, onPrevious }) => {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
               <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', minWidth: '32px', textAlign: 'right' }}>
-                {formatTime(playbackState?.position ?? 0)}
+                {formatTime(displayPosition)}
               </span>
               <input
                 type="range"
                 min={0}
                 max={playbackState?.duration || 1}
-                value={Math.min(playbackState?.position ?? 0, playbackState?.duration || 1)}
-                onChange={(e) => seek(Number(e.target.value))}
+                value={Math.min(displayPosition, playbackState?.duration || 1)}
+                onChange={(e) => {
+                  const newPosition = Number(e.target.value);
+                  // Re-anchor immediately so the tick interval continues
+                  // counting up from where the user just dragged to,
+                  // instead of snapping back to the pre-seek position
+                  // until the next real player_state_changed event.
+                  positionAnchorRef.current = {
+                    position: newPosition,
+                    timestamp: Date.now(),
+                    paused: !!playbackState?.paused,
+                  };
+                  setDisplayPosition(newPosition);
+                  seek(newPosition);
+                }}
                 style={{ flex: 1, accentColor: '#1ED760', cursor: 'pointer' }}
               />
               <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', minWidth: '32px' }}>

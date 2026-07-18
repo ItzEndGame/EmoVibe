@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { playlistsAPI, spotifyConnectAPI } from '../../services/api';
 import './Playlists.css';
-import CurrentlyPlayingBar from '../Spotify/CurrentlyPlayingBar';
-import { useListeningHeartbeat } from '../Spotify/useListeningHeartbeat';
 import ImportSpotifyPlaylistModal from './ImportSpotifyPlaylistModal';
+import { usePlayer } from '../../context/PlayerContext';
 
 const CreatePlaylistModal = ({ isOpen, onClose, onSuccess }) => {
   const [name, setName] = useState('');
@@ -267,16 +266,11 @@ const PlaylistDetail = ({ playlist, onBack, onRemoveSong }) => {
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [currentTrack, setCurrentTrack] = useState(null);
-  const { startTracking, stopTracking } = useListeningHeartbeat();
+  const { currentTrack, playTrack, setCurrentTrack } = usePlayer(); // shared with AppShell so playback survives navigating away
 
   useEffect(() => {
     loadPlaylistSongs();
   }, [playlist]);
-
-  useEffect(() => {
-    return () => stopTracking();
-  }, [stopTracking]);
 
   const loadPlaylistSongs = async () => {
     setLoading(true);
@@ -298,32 +292,16 @@ const PlaylistDetail = ({ playlist, onBack, onRemoveSong }) => {
 
   const handlePlay = (song) => {
     if (!song.spotify_track_id) return;
-    startTracking(song.spotify_track_id);
-    setCurrentTrack({
-      id: song.spotify_track_id,
-      title: song.song_title,
-      artist: song.artist,
-      album_art: song.album_art_url,
-      spotify_uri: `spotify:track:${song.spotify_track_id}`,
+    const toPlayerTrack = (s) => ({
+      id: s.spotify_track_id,
+      title: s.song_title,
+      artist: s.artist,
+      album_art: s.album_art_url,
+      spotify_uri: `spotify:track:${s.spotify_track_id}`,
     });
-  };
-
-  // Steps through this playlist's song list, same pattern used in
-  // LikedSongs/Dashboard/MainApp.
-  const handlePlayerNext = () => {
-    if (!currentTrack) return;
-    const idx = songs.findIndex((s) => s.spotify_track_id === currentTrack.id);
-    if (idx === -1 || idx === songs.length - 1) return;
-    const next = songs[idx + 1];
-    if (next.spotify_track_id) handlePlay(next);
-  };
-
-  const handlePlayerPrevious = () => {
-    if (!currentTrack) return;
-    const idx = songs.findIndex((s) => s.spotify_track_id === currentTrack.id);
-    if (idx <= 0) return;
-    const prev = songs[idx - 1];
-    if (prev.spotify_track_id) handlePlay(prev);
+    const queue = songs.filter((s) => s.spotify_track_id).map(toPlayerTrack);
+    const index = queue.findIndex((t) => t.id === song.spotify_track_id);
+    playTrack(toPlayerTrack(song), queue, index);
   };
 
   const handleRemoveSong = async (spotifyTrackId) => {
@@ -341,7 +319,7 @@ const PlaylistDetail = ({ playlist, onBack, onRemoveSong }) => {
   };
 
   return (
-    <div className="pl-detail" style={currentTrack ? { paddingBottom: '90px' } : undefined}>
+    <div className="pl-detail">
       <div className="pl-detail-header">
         <button className="pl-back-btn" onClick={onBack}>
           ← Back
@@ -396,11 +374,6 @@ const PlaylistDetail = ({ playlist, onBack, onRemoveSong }) => {
         </div>
       )}
 
-      <CurrentlyPlayingBar
-        track={currentTrack}
-        onNext={handlePlayerNext}
-        onPrevious={handlePlayerPrevious}
-      />
     </div>
   );
 };

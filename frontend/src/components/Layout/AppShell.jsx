@@ -3,6 +3,8 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import './AppShell.css';
 import logo from '../../assets/emovibe-logo.png';
 import { getUser, logout } from '../../services/api';
+import { PlayerProvider, usePlayer } from '../../context/PlayerContext';
+import CurrentlyPlayingBar from '../Spotify/CurrentlyPlayingBar';
 
 /* ============================== Icons ============================== */
 
@@ -92,7 +94,7 @@ const NAV_ITEMS = [
   { id: 'search', label: 'Search', icon: SearchIcon, path: '/app/search' },
   { id: 'liked', label: 'Liked Songs', icon: HeartIcon, path: '/app/liked' },
   { id: 'playlists', label: 'Playlists', icon: PlaylistIcon, path: '/app/playlists' },
-  { id: 'games', label: 'Games', icon: GamepadIcon, path: '/games' },
+  { id: 'games', label: 'Games', icon: GamepadIcon, path: '/app/games' },
 ];
 
 // Derives which nav item should be highlighted from the current route,
@@ -104,13 +106,24 @@ const activeNavFor = (pathname) => {
   if (pathname.startsWith('/app/liked')) return 'liked';
   if (pathname.startsWith('/app/playlists')) return 'playlists';
   if (pathname.startsWith('/app/settings')) return 'settings';
+  if (pathname.startsWith('/app/games')) return 'games';
   if (pathname.startsWith('/app')) return 'dashboard'; // covers /app and /app/detect
-  if (pathname.startsWith('/games')) return 'games';
   if (pathname.startsWith('/profile')) return 'profile';
   return 'dashboard';
 };
 
-const AppShell = () => {
+// AppShell is the layout route — it stays mounted for every /app/* and
+// /profile/* page. PlayerProvider lives here (not inside Dashboard or any
+// other page) so "currently playing" state, and the CurrentlyPlayingBar
+// itself, survive navigating between sections instead of unmounting with
+// whatever page started playback.
+const AppShell = () => (
+  <PlayerProvider>
+    <AppShellInner />
+  </PlayerProvider>
+);
+
+const AppShellInner = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = getUser();
@@ -120,6 +133,7 @@ const AppShell = () => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
+  const { currentTrack, hasNext, hasPrevious, nextTrack, previousTrack } = usePlayer();
 
   const goTo = (path) => {
     navigate(path);
@@ -239,9 +253,17 @@ const AppShell = () => {
       </aside>
 
       {/* Page content */}
-      <main className="db-main">
+      <main className="db-main" style={currentTrack ? { paddingBottom: '90px' } : undefined}>
         <Outlet />
       </main>
+
+      {/* Mounted here (outside <Outlet/>) so it keeps playing across
+          navigation instead of unmounting with whatever page started it. */}
+      <CurrentlyPlayingBar
+        track={currentTrack}
+        onNext={hasNext ? nextTrack : undefined}
+        onPrevious={hasPrevious ? previousTrack : undefined}
+      />
     </div>
   );
 };

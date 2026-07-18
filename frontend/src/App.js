@@ -100,19 +100,12 @@ function App() {
           {/* Notifications - streak milestones, Spotify status, etc */}
           <Route path="/app/notifications" element={<Notifications />} />
 
+          {/* Music Games - now shares the sidebar like every other page */}
+          <Route path="/app/games" element={<MusicGames />} />
+
           {/* Profile - now inside the shared shell like everything else */}
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
-
-        {/* Music Games */}
-        <Route 
-          path="/games" 
-          element={
-            <ProtectedRoute>
-              <MusicGames />
-            </ProtectedRoute>
-          }
-        />
 
         {/* 404 Route */}
         <Route path="*" element={<Navigate to="/" replace />} />

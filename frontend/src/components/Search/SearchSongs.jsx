@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './SearchSongs.css';
 import { musicAPI } from '../../services/api';
-import CurrentlyPlayingBar from '../Spotify/CurrentlyPlayingBar';
-import { useListeningHeartbeat } from '../Spotify/useListeningHeartbeat';
 import AddToPlaylistModal from '../Playlists/AddToPlaylistModal';
+import { usePlayer } from '../../context/PlayerContext';
 
 /**
  * Confirmed against routes/music.py's /search route:
@@ -39,8 +38,7 @@ const SearchSongs = () => {
   const [error, setError] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
 
-  const [currentTrack, setCurrentTrack] = useState(null);
-  const { startTracking, stopTracking } = useListeningHeartbeat();
+  const { currentTrack, playTrack } = usePlayer(); // shared with AppShell so playback survives navigating away
 
   const [likedMap, setLikedMap] = useState({}); // spotify_track_id -> DB row id
   const [addToPlaylistTrack, setAddToPlaylistTrack] = useState(null);
@@ -48,10 +46,6 @@ const SearchSongs = () => {
 
   const debounceRef = useRef(null);
   const requestIdRef = useRef(0); // guards against out-of-order responses
-
-  useEffect(() => {
-    return () => stopTracking();
-  }, [stopTracking]);
 
   // Load liked state once, same pattern as MainApp/CurrentlyPlayingBar —
   // needed so the heart icon reflects reality and unlike has the real DB id.
@@ -120,8 +114,10 @@ const SearchSongs = () => {
   };
 
   const handlePlay = (track) => {
-    startTracking(track.id);
-    setCurrentTrack({ ...track, spotify_uri: `spotify:track:${track.id}` });
+    const trackWithUri = { ...track, spotify_uri: `spotify:track:${track.id}` };
+    const queue = results.map((t) => ({ ...t, spotify_uri: `spotify:track:${t.id}` }));
+    const index = results.findIndex((t) => t.id === track.id);
+    playTrack(trackWithUri, queue, index);
   };
 
   const handleToggleLike = async (track) => {
@@ -153,7 +149,7 @@ const SearchSongs = () => {
   };
 
   return (
-    <div style={currentTrack ? { paddingBottom: '90px' } : undefined}>
+    <div>
       {toast && (
         <div className={`search-toast ${toast.type === 'error' ? 'search-toast-error' : ''}`}>
           {toast.message}
@@ -273,8 +269,6 @@ const SearchSongs = () => {
           </div>
         )}
       </div>
-
-      <CurrentlyPlayingBar track={currentTrack} />
 
       <AddToPlaylistModal
         isOpen={!!addToPlaylistTrack}

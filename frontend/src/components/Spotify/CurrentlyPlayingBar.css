@@ -1,0 +1,28 @@
+/* Fixed to the bottom of the content area only — left offset matches the
+   sidebar width (see .db-sidebar / .db-main in AppShell.css) so the bar
+   never overlaps the sidebar, including the account/profile row pinned
+   to its bottom. z-index is kept below the sidebar (100), mobile topbar
+   (200), and drawer/backdrop (900/1000) so it never sits on top of them. */
+.db-player-bar {
+  position: fixed;
+  bottom: 0;
+  left: 220px;
+  right: 0;
+  z-index: 60;
+  background: rgba(10, 14, 39, 0.97);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid var(--db-border, rgba(255, 255, 255, 0.1));
+}
+
+@media (max-width: 900px) {
+  .db-player-bar {
+    left: 180px;
+  }
+}
+
+@media (max-width: 768px) {
+  .db-player-bar {
+    left: 0;
+    bottom: 0;
+  }
+}

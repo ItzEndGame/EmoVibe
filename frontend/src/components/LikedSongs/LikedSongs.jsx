@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import './LikedSongs.css';
 import { musicAPI } from '../../services/api';
-import CurrentlyPlayingBar from '../Spotify/CurrentlyPlayingBar';
-import { useListeningHeartbeat } from '../Spotify/useListeningHeartbeat';
 import AddToPlaylistModal from '../Playlists/AddToPlaylistModal';
+import { usePlayer } from '../../context/PlayerContext';
 
 const PlayIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
@@ -28,8 +27,6 @@ const EMOTIONS = [
 const emotionMeta = (name) => EMOTIONS.find((e) => e.name === (name || '').toLowerCase()) || null;
 
 const LikedSongs = () => {
-  const { startTracking, stopTracking } = useListeningHeartbeat();
-
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -37,12 +34,8 @@ const LikedSongs = () => {
   const [search, setSearch] = useState('');
   const [unlikingId, setUnlikingId] = useState(null);
   const [toast, setToast] = useState(null);
-  const [currentTrack, setCurrentTrack] = useState(null); // plays right here, no navigation needed
+  const { currentTrack, playTrack } = usePlayer(); // shared with AppShell so playback survives navigating away
   const [addToPlaylistSong, setAddToPlaylistSong] = useState(null);
-
-  useEffect(() => {
-    return () => stopTracking();
-  }, [stopTracking]);
 
   const showToast = (message, type = 'success', action = null) => {
     setToast({ message, type, action });
@@ -90,37 +83,16 @@ const LikedSongs = () => {
       showToast("This song can't be played — missing its Spotify link.", 'error');
       return;
     }
-    startTracking(song.spotifyId);
-    setCurrentTrack({
-      id: song.spotifyId,
-      title: song.title,
-      artist: song.artist,
-      album_art: song.albumArt,
-      spotify_uri: `spotify:track:${song.spotifyId}`,
+    const toPlayerTrack = (s) => ({
+      id: s.spotifyId,
+      title: s.title,
+      artist: s.artist,
+      album_art: s.albumArt,
+      spotify_uri: `spotify:track:${s.spotifyId}`,
     });
-  };
-
-  // Steps the bottom player bar to the next/previous song within the
-  // currently-filtered liked-songs list — mirrors the same pattern
-  // MainApp uses for its recommendations list.
-  const handlePlayerNext = () => {
-    if (!currentTrack) return;
-    const idx = filtered.findIndex((s) => s.spotifyId === currentTrack.id);
-    if (idx === -1 || idx === filtered.length - 1) return;
-    const next = filtered[idx + 1];
-    if (!next.spotifyId) return;
-    setCurrentTrack({ id: next.spotifyId, title: next.title, artist: next.artist, album_art: next.albumArt, spotify_uri: `spotify:track:${next.spotifyId}` });
-    startTracking(next.spotifyId);
-  };
-
-  const handlePlayerPrevious = () => {
-    if (!currentTrack) return;
-    const idx = filtered.findIndex((s) => s.spotifyId === currentTrack.id);
-    if (idx <= 0) return;
-    const prev = filtered[idx - 1];
-    if (!prev.spotifyId) return;
-    setCurrentTrack({ id: prev.spotifyId, title: prev.title, artist: prev.artist, album_art: prev.albumArt, spotify_uri: `spotify:track:${prev.spotifyId}` });
-    startTracking(prev.spotifyId);
+    const queue = filtered.filter((s) => s.spotifyId).map(toPlayerTrack);
+    const index = queue.findIndex((t) => t.id === song.spotifyId);
+    playTrack(toPlayerTrack(song), queue, index);
   };
 
   const handleUnlike = async (song) => {
@@ -163,7 +135,7 @@ const LikedSongs = () => {
   };
 
   return (
-    <div style={currentTrack ? { paddingBottom: '90px' } : undefined}>
+    <div>
       {toast && (
         <div className={`liked-toast ${toast.type === 'error' ? 'liked-toast-error' : ''}`}>
           <span>{toast.message}</span>
@@ -284,12 +256,6 @@ const LikedSongs = () => {
           </div>
         )}
       </div>
-
-      <CurrentlyPlayingBar
-        track={currentTrack}
-        onNext={handlePlayerNext}
-        onPrevious={handlePlayerPrevious}
-      />
 
       <AddToPlaylistModal
         isOpen={!!addToPlaylistSong}

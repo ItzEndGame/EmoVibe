@@ -16,6 +16,23 @@ const EMOTIONS = [
 ];
 const emotionMeta = (name) => EMOTIONS.find((e) => e.name === (name || '').toLowerCase()) || null;
 
+// Songs played without a detected emotion come back from the backend with
+// no real emotion value, which — once it round-trips through
+// Object.entries on the breakdown object — shows up as the literal string
+// "null" (object keys are always strings). emotionMeta finds no match for
+// that, so without this, the raw "null" text would render as-is.
+const UNKNOWN_EMOTION_KEYS = new Set(['null', 'undefined', 'none', '', 'unknown']);
+const emotionDisplay = (emotion) => {
+  const meta = emotionMeta(emotion);
+  if (meta) return meta;
+  const isUnknown = UNKNOWN_EMOTION_KEYS.has((emotion || '').toLowerCase());
+  return {
+    label: isUnknown ? 'Unknown' : emotion,
+    emoji: isUnknown ? '❓' : '🎵',
+    color: '#8a8f98',
+  };
+};
+
 const profilePictureUrl = (filename) => {
   if (!filename) return null;
   return `${API_ROOT}/api/user/profile/picture/${filename}`;
@@ -43,6 +60,14 @@ const ProfilePage = () => {
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState('');
+
+  // If avatarUrl 404s or otherwise fails to load (stale filename, moved
+  // file, etc.), the browser's default behavior is to render the <img>'s
+  // alt text in its place — which here would be the user's full name,
+  // right inside what's supposed to be a small circular avatar. This
+  // catches that and falls back to the same initial-letter avatar used
+  // when there's no photo at all.
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
 
   const [toast, setToast] = useState(null);
   const showToast = (message, type = 'success') => {
@@ -154,6 +179,13 @@ const ProfilePage = () => {
 
   const hasCustomPhoto = !!user?.profile_picture && user.profile_picture !== DEFAULT_PROFILE_PICTURE;
   const avatarUrl = hasCustomPhoto ? profilePictureUrl(user.profile_picture) : null;
+  const showAvatarImage = !!avatarUrl && !avatarLoadFailed;
+
+  // New photo (upload, removal, or a fresh profile fetch) — give it a
+  // clean shot at loading instead of staying stuck on a previous failure.
+  useEffect(() => {
+    setAvatarLoadFailed(false);
+  }, [avatarUrl]);
 
   return (
     <>
@@ -180,8 +212,12 @@ const ProfilePage = () => {
 
         <div className="prof-avatar-wrap">
           <div className="prof-avatar" onClick={() => fileInputRef.current.click()}>
-            {avatarUrl ? (
-              <img src={avatarUrl} alt={user?.name || 'Profile'} />
+            {showAvatarImage ? (
+              <img
+                src={avatarUrl}
+                alt={user?.name || 'Profile'}
+                onError={() => setAvatarLoadFailed(true)}
+              />
             ) : (
               <span>{user?.name?.charAt(0).toUpperCase() || '👤'}</span>
             )}
@@ -310,20 +346,20 @@ const ProfilePage = () => {
             {Object.entries(stats.emotion_breakdown)
               .sort(([, a], [, b]) => b - a)
               .map(([emotion, count]) => {
-                const meta = emotionMeta(emotion);
+                const meta = emotionDisplay(emotion);
                 const total = stats.total_liked_songs || 1;
                 const pct = Math.round((count / total) * 100);
                 return (
                   <div key={emotion} className="prof-emotion-row">
                     <div className="prof-emotion-label">
-                      <span>{meta?.emoji || '🎵'}</span>
-                      <span>{meta?.label || emotion}</span>
+                      <span>{meta.emoji}</span>
+                      <span>{meta.label}</span>
                       <span className="prof-emotion-count">{count} song{count === 1 ? '' : 's'}</span>
                     </div>
                     <div className="prof-emotion-bar-track">
                       <div
                         className="prof-emotion-bar-fill"
-                        style={{ width: `${pct}%`, background: meta?.color || '#8fe34d' }}
+                        style={{ width: `${pct}%`, background: meta.color }}
                       >
                         <span>{pct}%</span>
                       </div>

@@ -2,9 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import { emotionAPI, musicAPI,notificationsAPI, getUser } from '../../services/api';
-import CurrentlyPlayingBar from '../Spotify/CurrentlyPlayingBar';
-import { useListeningHeartbeat } from '../Spotify/useListeningHeartbeat';
 import SpotifyConnectBanner from '../Spotify/SpotifyConnectBanner';
+import { usePlayer } from '../../context/PlayerContext';
 
 /* ============================== Icons ============================== */
 
@@ -72,7 +71,6 @@ const timeAgo = (value) => {
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user] = useState(() => getUser());
-  const { startTracking } = useListeningHeartbeat();
 
   // Recent Detections (right column)
   const [recentDetections, setRecentDetections] = useState([]);
@@ -89,7 +87,7 @@ const Dashboard = () => {
   const [lastLiked, setLastLiked] = useState(null);
   const [lastLikedLoading, setLastLikedLoading] = useState(true);
   const [unliking, setUnliking] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState(null); // plays via the real CurrentlyPlayingBar, not a raw iframe
+  const { currentTrack, setCurrentTrack } = usePlayer(); // shared with AppShell so playback survives navigating away
 
   // Streaks
   const [currentStreak, setCurrentStreak] = useState(null);
@@ -263,7 +261,6 @@ const Dashboard = () => {
 
   const handlePlayLastLiked = () => {
     if (!lastLiked) return;
-    startTracking(lastLiked.id);
     setCurrentTrack({
       id: lastLiked.id,
       title: lastLiked.title,
@@ -276,7 +273,7 @@ const Dashboard = () => {
   const firstName = user?.name?.split(' ')[0] || 'there';
 
   return (
-    <div style={currentTrack ? { paddingBottom: '90px' } : undefined}>
+    <div>
       {/* Header */}
       <header className="db-header">
         <div className="db-header-left">
@@ -525,8 +522,6 @@ const Dashboard = () => {
             </div>
           </aside>
         </div>
-
-      <CurrentlyPlayingBar track={currentTrack} />
     </div>
   );
 };

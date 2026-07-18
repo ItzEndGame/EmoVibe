@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { spotifyConnectAPI, getUser } from '../../services/api';
+import { usePlayer } from '../../context/PlayerContext';
 
 /**
  * Spotify connection banner.
@@ -15,6 +16,7 @@ const SpotifyConnectBanner = () => {
   const [dismissed, setDismissed] = useState(false);
   const [connectError, setConnectError] = useState(false);
   const [connectErrorDetail, setConnectErrorDetail] = useState('');
+  const { refreshStatus: refreshSpotifySdk } = usePlayer().spotify;
 
   const user = getUser();
   const dismissKey = user?.id ? `spotify_banner_dismissed_${user.id}` : null;
@@ -50,6 +52,11 @@ const SpotifyConnectBanner = () => {
 
     if (outcome === 'connected') {
       spotifyConnectAPI.getStatus().then(setStatus).catch(() => {});
+      // The Spotify SDK connection (in PlayerContext) only checks Premium
+      // status once, on initial app load, since it no longer remounts on
+      // navigation. If the account wasn't connected yet at that point,
+      // it needs to be told explicitly to check again now that it is.
+      refreshSpotifySdk();
       window.history.replaceState({}, '', window.location.pathname);
     } else if (outcome) {
       // Covers 'error' plus the other failure flags this route can send

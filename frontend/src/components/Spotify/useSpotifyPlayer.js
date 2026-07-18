@@ -15,6 +15,16 @@ import { spotifyConnectAPI, musicAPI } from '../../services/api';
  * elapsed real playback time for the *previous* track is sent to
  * /api/music/listening-session with is_estimated=false, since this is
  * genuine SDK telemetry, not a guess.
+ *
+ * This hook is now instantiated exactly once, inside PlayerContext, so
+ * that the SDK connection (and the currently-playing track) survives
+ * navigating around the app instead of disconnecting/reconnecting on
+ * every route change. One side effect: the Premium/connected status
+ * check below only naturally runs once, on first mount — there's no
+ * more "navigate away and back" to accidentally retry it. So the check
+ * is exposed as refreshStatus(), meant to be called explicitly whenever
+ * something *actually* changed (e.g. right after the user connects
+ * Spotify in SpotifyConnectBanner), rather than relying on remounts.
  */
 export function useSpotifyPlayer() {
   const [isReady, setIsReady] = useState(false);
@@ -25,6 +35,8 @@ export function useSpotifyPlayer() {
   const playerRef = useRef(null);
   const currentTrackRef = useRef(null);       // { id, startedAt, accumulatedMs, lastKnownPosition }
   const lastTickRef = useRef(null);
+  const cancelledRef = useRef(false);
+  const connectingRef = useRef(false); // guards against creating a second SDK Player instance
 
   const flushSession = useCallback((trackInfo) => {
     if (!trackInfo || !trackInfo.id) return;
@@ -36,112 +48,136 @@ export function useSpotifyPlayer() {
     });
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
+  const connectPlayer = useCallback(() => {
+    // Already have a live player (or one mid-setup) — nothing to do.
+    // Without this guard, calling refreshStatus() again after the SDK
+    // already connected would spin up a second competing Player instance.
+    if (connectingRef.current || playerRef.current) return;
+    connectingRef.current = true;
 
-    const init = async () => {
-      let statusResult;
-      try {
-        statusResult = await spotifyConnectAPI.getStatus();
-      } catch {
-        return; // Not connected / not logged in
-      }
+    if (!document.getElementById('spotify-player-sdk')) {
+      const script = document.createElement('script');
+      script.id = 'spotify-player-sdk';
+      script.src = 'https://sdk.scdn.co/spotify-player.js';
+      script.async = true;
+      document.body.appendChild(script);
+    }
 
-      if (cancelled) return;
-      setIsPremium(!!statusResult?.is_premium);
+    const setupPlayer = () => {
+      if (cancelledRef.current) return;
 
-      if (!statusResult.connected || !statusResult.is_premium) {
-        return; // Free accounts can't use the Web Playback SDK at all
-      }
-
-      if (!document.getElementById('spotify-player-sdk')) {
-        const script = document.createElement('script');
-        script.id = 'spotify-player-sdk';
-        script.src = 'https://sdk.scdn.co/spotify-player.js';
-        script.async = true;
-        document.body.appendChild(script);
-      }
-
-      window.onSpotifyWebPlaybackSDKReady = () => {
-        if (cancelled) return;
-
-        const player = new window.Spotify.Player({
-          name: 'EmoVibe Player',
-          getOAuthToken: async (callback) => {
-            try {
-              const tokenResult = await spotifyConnectAPI.getPlaybackToken();
-              callback(tokenResult.access_token);
-            } catch (err) {
-              console.error('Failed to get Spotify playback token:', err);
-            }
-          },
-          volume: 0.7,
-        });
-
-        player.addListener('ready', ({ device_id }) => {
-          setDeviceId(device_id);
-          setIsReady(true);
-        });
-
-        player.addListener('not_ready', () => {
-          setIsReady(false);
-        });
-
-        player.addListener('initialization_error', ({ message }) => {
-          console.error('Spotify player init error:', message);
-        });
-
-        player.addListener('authentication_error', ({ message }) => {
-          console.error('Spotify player auth error:', message);
-        });
-
-        // This is the core telemetry event — fires on play, pause, seek,
-        // track change, roughly every second during playback.
-        player.addListener('player_state_changed', (state) => {
-          if (!state) return;
-          setPlaybackState(state);
-
-          const trackId = state.track_window?.current_track?.id;
-          const now = Date.now();
-
-          if (!currentTrackRef.current || currentTrackRef.current.id !== trackId) {
-            // Track changed — flush the previous track's accumulated time first
-            flushSession(currentTrackRef.current);
-            currentTrackRef.current = { id: trackId, accumulatedMs: 0 };
-            lastTickRef.current = state.paused ? null : now;
-          } else if (!state.paused && lastTickRef.current) {
-            // Still the same track, playing — accumulate elapsed time
-            currentTrackRef.current.accumulatedMs += now - lastTickRef.current;
-            lastTickRef.current = now;
-          } else if (state.paused) {
-            // Paused — stop the running clock, but keep accumulated time
-            if (lastTickRef.current) {
-              currentTrackRef.current.accumulatedMs += now - lastTickRef.current;
-            }
-            lastTickRef.current = null;
-          } else if (!state.paused && !lastTickRef.current) {
-            // Resumed from pause
-            lastTickRef.current = now;
+      const player = new window.Spotify.Player({
+        name: 'EmoVibe Player',
+        getOAuthToken: async (callback) => {
+          try {
+            const tokenResult = await spotifyConnectAPI.getPlaybackToken();
+            callback(tokenResult.access_token);
+          } catch (err) {
+            console.error('Failed to get Spotify playback token:', err);
           }
-        });
+        },
+        volume: 0.7,
+      });
 
-        player.connect();
-        playerRef.current = player;
-      };
+      player.addListener('ready', ({ device_id }) => {
+        setDeviceId(device_id);
+        setIsReady(true);
+      });
+
+      player.addListener('not_ready', () => {
+        setIsReady(false);
+      });
+
+      player.addListener('initialization_error', ({ message }) => {
+        console.error('Spotify player init error:', message);
+      });
+
+      player.addListener('authentication_error', ({ message }) => {
+        console.error('Spotify player auth error:', message);
+      });
+
+      // This is the core telemetry event — fires on play, pause, seek,
+      // track change, roughly every second during playback.
+      player.addListener('player_state_changed', (state) => {
+        if (!state) return;
+        setPlaybackState(state);
+
+        const trackId = state.track_window?.current_track?.id;
+        const now = Date.now();
+
+        if (!currentTrackRef.current || currentTrackRef.current.id !== trackId) {
+          // Track changed — flush the previous track's accumulated time first
+          flushSession(currentTrackRef.current);
+          currentTrackRef.current = { id: trackId, accumulatedMs: 0 };
+          lastTickRef.current = state.paused ? null : now;
+        } else if (!state.paused && lastTickRef.current) {
+          // Still the same track, playing — accumulate elapsed time
+          currentTrackRef.current.accumulatedMs += now - lastTickRef.current;
+          lastTickRef.current = now;
+        } else if (state.paused) {
+          // Paused — stop the running clock, but keep accumulated time
+          if (lastTickRef.current) {
+            currentTrackRef.current.accumulatedMs += now - lastTickRef.current;
+          }
+          lastTickRef.current = null;
+        } else if (!state.paused && !lastTickRef.current) {
+          // Resumed from pause
+          lastTickRef.current = now;
+        }
+      });
+
+      player.connect();
+      playerRef.current = player;
     };
 
-    init();
+    // If the SDK script was already loaded and ready by an earlier call
+    // (e.g. this is a refreshStatus() retry, not the first attempt),
+    // window.onSpotifyWebPlaybackSDKReady already fired once and won't
+    // fire again — set the player up directly in that case.
+    if (window.Spotify) {
+      setupPlayer();
+    } else {
+      window.onSpotifyWebPlaybackSDKReady = setupPlayer;
+    }
+  }, [flushSession]);
+
+  // Checks Spotify connect status, and connects the SDK player if the
+  // account is connected + Premium. Safe to call more than once — safe
+  // to call before the previous call finished, too.
+  const checkStatus = useCallback(async () => {
+    let statusResult;
+    try {
+      statusResult = await spotifyConnectAPI.getStatus();
+    } catch {
+      return; // Not connected / not logged in
+    }
+
+    if (cancelledRef.current) return;
+    setIsPremium(!!statusResult?.is_premium);
+
+    if (!statusResult.connected || !statusResult.is_premium) {
+      return; // Free accounts can't use the Web Playback SDK at all
+    }
+
+    connectPlayer();
+  }, [connectPlayer]);
+
+  useEffect(() => {
+    cancelledRef.current = false;
+    checkStatus();
 
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
       // Flush whatever was accumulated when the component unmounts
       // (e.g. user navigates away mid-song).
       flushSession(currentTrackRef.current);
       if (playerRef.current) {
         playerRef.current.disconnect();
+        playerRef.current = null;
       }
     };
-  }, [flushSession]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const playTrack = useCallback(async (spotifyTrackUri) => {
     if (!deviceId) return false;
@@ -189,5 +225,6 @@ export function useSpotifyPlayer() {
     previousTrack,
     seek,
     player: playerRef.current,
+    refreshStatus: checkStatus, // call after e.g. connecting Spotify, since this hook no longer remounts on navigation to retry on its own
   };
 }
