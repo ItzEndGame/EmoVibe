@@ -873,6 +873,121 @@ class DatabaseHelper:
             print(f"Error updating user preferences: {str(e)}")
             return False
 
+    # ==================== NOTIFICATIONS ====================
+
+    def create_notification(self, user_id, notif_type, title, message=None, dedup_key=None):
+        """
+        Insert a notification. If dedup_key is provided and a notification
+        with the same (user_id, dedup_key) already exists, this is a
+        silent no-op (ON CONFLICT DO NOTHING) — prevents the same
+        underlying event from creating duplicate rows (e.g. hitting the
+        same streak milestone twice in one day). Pass dedup_key=None for
+        notifications that are fine to insert freely (e.g. a one-off
+        "Spotify connected" message).
+
+        Returns the new notification's id, or None if it was a dedup
+        no-op or the insert failed.
+        """
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute('''
+                        INSERT INTO notifications (user_id, type, title, message, dedup_key)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ON CONFLICT (user_id, dedup_key) DO NOTHING
+                        RETURNING id
+                    ''', (user_id, notif_type, title, message, dedup_key))
+                    row = cursor.fetchone()
+                conn.commit()
+            return row[0] if row else None
+        except Exception as e:
+            print(f"Error creating notification: {str(e)}")
+            return None
+
+    def get_notifications(self, user_id, limit=50):
+        try:
+            with self.get_connection() as conn:
+                with self._dict_cursor(conn) as cursor:
+                    cursor.execute('''
+                        SELECT * FROM notifications
+                        WHERE user_id = %s
+                        ORDER BY created_at DESC
+                        LIMIT %s
+                    ''', (user_id, limit))
+                    rows = cursor.fetchall()
+            return [dict(r) for r in rows]
+        except Exception as e:
+            print(f"Error getting notifications: {str(e)}")
+            return []
+
+    def get_unread_notification_count(self, user_id):
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute('''
+                        SELECT COUNT(*) FROM notifications
+                        WHERE user_id = %s AND read_at IS NULL
+                    ''', (user_id,))
+                    count = cursor.fetchone()[0]
+            return count
+        except Exception as e:
+            print(f"Error getting unread notification count: {str(e)}")
+            return 0
+
+    def mark_notification_read(self, notification_id, user_id):
+        """Returns True only if a row actually existed and belonged to
+        this user — lets the route tell 'already read' / 'not found'
+        apart from a real update."""
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute('''
+                        UPDATE notifications SET read_at = CURRENT_TIMESTAMP
+                        WHERE id = %s AND user_id = %s AND read_at IS NULL
+                    ''', (notification_id, user_id))
+                    updated = cursor.rowcount > 0
+                conn.commit()
+            return updated
+        except Exception as e:
+            print(f"Error marking notification read: {str(e)}")
+            return False
+
+    def mark_all_notifications_read(self, user_id):
+        """Returns how many rows were actually updated."""
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute('''
+                        UPDATE notifications SET read_at = CURRENT_TIMESTAMP
+                        WHERE user_id = %s AND read_at IS NULL
+                    ''', (user_id,))
+                    updated_count = cursor.rowcount
+                conn.commit()
+            return updated_count
+        except Exception as e:
+            print(f"Error marking all notifications read: {str(e)}")
+            return 0
+
+    def reset_notification_dedup(self, user_id, dedup_key):
+        """
+        Deletes any existing notification with this dedup_key so a future
+        occurrence of the same event can insert a fresh notification
+        instead of being silently blocked by the ON CONFLICT guard.
+        Used e.g. when Spotify reconnects successfully, to clear the old
+        'spotify_disconnected' row so a later disconnect can notify again.
+        """
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute('''
+                        DELETE FROM notifications WHERE user_id = %s AND dedup_key = %s
+                    ''', (user_id, dedup_key))
+                conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error resetting notification dedup: {str(e)}")
+            return False
+
     # ==================== STATISTICS ====================
 
     def get_user_statistics(self, user_id):

@@ -211,6 +211,59 @@ def upload_profile_picture():
             'message': 'Internal server error'
         }), 500
 
+@user_bp.route('/profile/picture', methods=['DELETE'])
+@jwt_required()
+def remove_profile_picture():
+    """
+    Remove the user's custom profile picture, reverting to the default
+    avatar. Mirrors the same file-cleanup pattern delete_account uses
+    below for the profile picture it deletes.
+    """
+    try:
+        current_user_id = get_jwt_identity()
+        user = db.get_user_by_id(current_user_id)
+
+        if not user:
+            return jsonify({
+                'success': False,
+                'message': 'User not found'
+            }), 404
+
+        current_picture = user.get('profile_picture')
+
+        if not current_picture or current_picture == Config.DEFAULT_PROFILE_PICTURE:
+            return jsonify({
+                'success': False,
+                'message': 'No custom profile picture to remove'
+            }), 400
+
+        # Delete the actual file (best-effort — don't fail the request if
+        # this doesn't work, the DB update is what actually matters)
+        picture_path = os.path.join(Config.PROFILE_PICTURE_FOLDER, current_picture)
+        if os.path.exists(picture_path):
+            try:
+                os.remove(picture_path)
+            except Exception as e:
+                print(f"Error deleting profile picture file: {str(e)}")
+
+        db.update_user_profile(
+            user_id=current_user_id,
+            profile_picture=Config.DEFAULT_PROFILE_PICTURE
+        )
+
+        return jsonify({
+            'success': True,
+            'message': 'Profile picture removed successfully',
+            'profile_picture': Config.DEFAULT_PROFILE_PICTURE
+        }), 200
+
+    except Exception as e:
+        print(f"Error in remove_profile_picture: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Internal server error'
+        }), 500
+
 @user_bp.route('/profile/picture/<filename>', methods=['GET'])
 def get_profile_picture(filename):
     """

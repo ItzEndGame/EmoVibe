@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
 import os
 import uuid
+from datetime import datetime
 from utils.image_processor import ImageProcessor
 from utils.emotion_detector import EmotionDetector
 from utils.db_helper import DatabaseHelper
@@ -14,6 +15,36 @@ emotion_bp = Blueprint('emotion', __name__, url_prefix='/api/emotion')
 image_processor = ImageProcessor()
 emotion_detector = EmotionDetector()
 db = DatabaseHelper()
+
+# Streak lengths (in days) that trigger a "streak milestone" notification.
+STREAK_MILESTONES = [3, 7, 14, 30, 60, 100, 200, 365]
+
+
+def _check_streak_milestone(user_id):
+    """
+    Call this right after db.log_detection(). Re-checks the user's
+    current streak and, if it just landed exactly on a milestone value,
+    creates a notification for it.
+
+    dedup_key includes today's date (not just the milestone value) so a
+    streak that resets to 0 and later climbs back to the same milestone
+    (e.g. 7 days again, weeks later) can still notify — while two
+    detections logged on the *same* day at the *same* streak length only
+    notify once.
+    """
+    try:
+        streak = db.get_detection_streak(user_id)
+        if streak in STREAK_MILESTONES:
+            today_str = datetime.now().strftime('%Y-%m-%d')
+            db.create_notification(
+                user_id=user_id,
+                notif_type='streak_milestone',
+                title=f'{streak}-Day Streak! 🔥',
+                message=f"You've checked in for {streak} days in a row. Keep the streak alive!",
+                dedup_key=f'streak_{streak}_{today_str}'
+            )
+    except Exception as e:
+        print(f"Error checking streak milestone: {str(e)}")
 
 def allowed_file(filename):
     """Check if file extension is allowed"""
@@ -86,6 +117,7 @@ def detect_emotion_upload():
 
             # Log this detection (no photo stored, just emotion + method + timestamp)
             db.log_detection(current_user_id, prediction['emotion'], 'upload_photo')
+            _check_streak_milestone(current_user_id)
 
             response_data = {
                 'success': True,
@@ -160,6 +192,7 @@ def detect_emotion_live():
 
         # Log this detection (no photo stored, just emotion + method + timestamp)
         db.log_detection(current_user_id, prediction['emotion'], 'live_photo')
+        _check_streak_milestone(current_user_id)
 
         response_data = {
             'success': True,
@@ -350,6 +383,7 @@ def log_manual_selection():
             }), 400
 
         db.log_detection(current_user_id, emotion, 'select_emotion')
+        _check_streak_milestone(current_user_id)
 
         return jsonify({
             'success': True,

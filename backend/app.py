@@ -11,6 +11,7 @@ from routes.user import user_bp
 from routes.spotify_connect import spotify_connect_bp
 from routes.playlists import playlists_bp
 from routes.preferences import preferences_bp
+from routes.notifications import notifications_bp
 
 def create_app(config_name='development'):
     app = Flask(__name__)
@@ -48,6 +49,7 @@ def create_app(config_name='development'):
     app.register_blueprint(spotify_connect_bp)
     app.register_blueprint(playlists_bp)
     app.register_blueprint(preferences_bp)
+    app.register_blueprint(notifications_bp)
 
     @app.route('/')
     def index():
@@ -184,6 +186,7 @@ if __name__ == '__main__':
     print(f"   - User:            http://{Config.HOST}:{Config.PORT}/api/user/*")
     print(f"   - Playlists:       http://{Config.HOST}:{Config.PORT}/api/playlists/*")
     print(f"   - Preferences:     http://{Config.HOST}:{Config.PORT}/api/preferences/*")
+    print(f"   - Notifications:   http://{Config.HOST}:{Config.PORT}/api/notifications/*")
 
     print("\n" + "="*60)
     print("🎉 Server is ready! Press CTRL+C to stop.")

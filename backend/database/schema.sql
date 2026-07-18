@@ -159,6 +159,27 @@ CREATE TABLE IF NOT EXISTS user_preferences (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Notifications Table
+-- Backend-driven notifications for the bell icon (streak milestones,
+-- Spotify connection status, etc). dedup_key prevents the same underlying
+-- event from being inserted twice (e.g. hitting the same streak milestone
+-- again on the same day, or re-notifying "Spotify disconnected" on every
+-- single status check) — enforced via a partial unique index below, with
+-- inserts using ON CONFLICT (user_id, dedup_key) DO NOTHING. Rows with a
+-- NULL dedup_key are never deduped (e.g. a one-off "Spotify connected"
+-- notification that's fine to insert freely, since it only fires once per
+-- real OAuth completion).
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type TEXT NOT NULL,                     -- 'streak_milestone' | 'spotify_status'
+    title TEXT NOT NULL,
+    message TEXT,
+    dedup_key TEXT,
+    read_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_provider ON users(auth_provider, provider_user_id);
@@ -181,6 +202,14 @@ CREATE INDEX IF NOT EXISTS idx_mood_playlist_songs_playlist_id ON mood_playlist_
 
 CREATE INDEX IF NOT EXISTS idx_listening_sessions_user_id ON listening_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_listening_sessions_user_date ON listening_sessions(user_id, session_date);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id) WHERE read_at IS NULL;
+-- Enforces the dedup_key contract described above the table definition.
+-- Partial index (WHERE dedup_key IS NOT NULL) so rows that intentionally
+-- skip dedup (NULL key) never collide with each other.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_notifications_user_dedup
+    ON notifications(user_id, dedup_key) WHERE dedup_key IS NOT NULL;
 
 -- Function + Trigger to auto-update updated_at on users
 CREATE OR REPLACE FUNCTION update_updated_at_column()

@@ -133,6 +133,22 @@ def spotify_callback():
             is_premium=is_premium
         )
 
+        # Clear any stale "disconnected" notification so a future
+        # disconnect can notify again instead of being silently blocked
+        # by the dedup guard.
+        db.reset_notification_dedup(int(user_id), 'spotify_disconnected')
+        db.create_notification(
+            user_id=int(user_id),
+            notif_type='spotify_status',
+            title='Spotify connected 🎧',
+            message=(
+                'Your Spotify account is connected — full playback is now enabled.'
+                if is_premium else
+                'Your Spotify account is connected. Free accounts get 30-second previews.'
+            ),
+            dedup_key=None
+        )
+
         premium_param = 'true' if is_premium else 'false'
         return redirect(f'http://localhost:3000/app?spotify=connected&premium={premium_param}')
 
@@ -174,6 +190,13 @@ def spotify_status():
             # Try to refresh
             refreshed = _refresh_spotify_token(user_id, tokens['refresh_token'])
             if not refreshed:
+                db.create_notification(
+                    user_id=user_id,
+                    notif_type='spotify_status',
+                    title='Spotify disconnected',
+                    message='Your Spotify session expired. Reconnect in Settings to keep enjoying full playback.',
+                    dedup_key='spotify_disconnected'
+                )
                 return jsonify({
                     'success': True,
                     'connected': False,
