@@ -10,41 +10,81 @@ import recPeacefulPiano from '../../assets/rec-peaceful-piano.jpg';
 import recNatureEscape from '../../assets/rec-nature-escape.jpg';
 import recMorningAcoustic from '../../assets/rec-morning-acoustic.jpg';
 
-const NAV_LINKS = ['Home', 'How It Works', 'Features', 'Benefits', 'About Us'];
+const NAV_LINKS = ['Home', 'How It Works', 'Features', 'Benefits', 'About Me'];
+
+const FaceScanIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <path d="M7 3H4a1 1 0 00-1 1v3M17 3h3a1 1 0 011 1v3M7 21H4a1 1 0 01-1-1v-3M17 21h3a1 1 0 001-1v-3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <circle cx="9" cy="11" r="1" fill="currentColor" />
+    <circle cx="15" cy="11" r="1" fill="currentColor" />
+    <path d="M9 15c.8.6 1.9 1 3 1s2.2-.4 3-1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+  </svg>
+);
+
+const EmotionIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <path d="M12 21s-7.5-4.6-10-9.2C.4 8.1 2 4.5 5.6 4c2-.3 3.8.7 4.9 2.2.4.5.6.8.6.8s.2-.3.6-.8C12.7 4.7 14.5 3.7 16.5 4c3.5.5 5.2 4.1 3.5 7.8C17.5 16.4 12 21 12 21z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    <path d="M5.5 12h3l1.5-2.5L12 14l1.5-2.5h3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const MusicNoteIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <path d="M9 18V5l11-2v13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="6" cy="18" r="3" stroke="currentColor" strokeWidth="1.6" />
+    <circle cx="17" cy="16" r="3" stroke="currentColor" strokeWidth="1.6" />
+  </svg>
+);
+
+// ===== Icons for the sections below the hero =====
+
+const CameraIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <path d="M4 8a2 2 0 012-2h1.5l1-1.6A1 1 0 019.35 4h5.3a1 1 0 01.85.4l1 1.6H18a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V8z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    <circle cx="12" cy="13" r="3.5" stroke="currentColor" strokeWidth="1.6" />
+  </svg>
+);
+
+const HeartLineIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+  </svg>
+);
+
+const LinkIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <path d="M10 14a4.5 4.5 0 006.4.4l2.5-2.5a4.5 4.5 0 00-6.4-6.4l-1.5 1.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M14 10a4.5 4.5 0 00-6.4-.4L5.1 12a4.5 4.5 0 006.4 6.4l1.4-1.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const ChartIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <path d="M4 20V10M12 20V4M20 20v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+    <path d="M4 12.5l5.5 5.5L20 6.5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 const HERO_FEATURES = [
   {
     title: 'AI Face Recognition',
     body: 'Advanced AI detects your facial emotions',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-        <path d="M7 3H4a1 1 0 00-1 1v3M17 3h3a1 1 0 011 1v3M7 21H4a1 1 0 01-1-1v-3M17 21h3a1 1 0 001-1v-3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-        <circle cx="9" cy="11" r="1" fill="currentColor" />
-        <circle cx="15" cy="11" r="1" fill="currentColor" />
-        <path d="M9 15c.8.6 1.9 1 3 1s2.2-.4 3-1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      </svg>
-    ),
+    icon: <FaceScanIcon />,
   },
   {
     title: 'Emotion Detection',
     body: 'Accurate mood analysis in real-time',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-        <path d="M12 21s-7.5-4.6-10-9.2C.4 8.1 2 4.5 5.6 4c2-.3 3.8.7 4.9 2.2.4.5.6.8.6.8s.2-.3.6-.8C12.7 4.7 14.5 3.7 16.5 4c3.5.5 5.2 4.1 3.5 7.8C17.5 16.4 12 21 12 21z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-        <path d="M5.5 12h3l1.5-2.5L12 14l1.5-2.5h3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
+    icon: <EmotionIcon />,
   },
   {
     title: 'Mood-based Recommendations',
     body: 'Get the perfect music for your vibe',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-        <path d="M9 18V5l11-2v13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="6" cy="18" r="3" stroke="currentColor" strokeWidth="1.6" />
-        <circle cx="17" cy="16" r="3" stroke="currentColor" strokeWidth="1.6" />
-      </svg>
-    ),
+    icon: <MusicNoteIcon />,
   },
 ];
 
@@ -59,6 +99,97 @@ const WAVEFORM_HEIGHTS = [6, 14, 8, 22, 10, 18, 26, 12, 20, 8, 16, 24, 10, 6, 18
 const GENRES = [
   'Pop', 'Rock', 'Hip-Hop', 'R&B', 'Electronic', 'Dance',
   'Classical', 'Jazz', 'Country', 'Folk', 'Indie', 'Alternative',
+];
+
+// A real, ordered process — numbered steps are earned here, unlike the
+// grid sections below where the items don't have a sequence.
+const HOW_IT_WORKS_STEPS = [
+  {
+    step: '01',
+    title: 'Enable Your Camera',
+    body: "Give EmoVibe a moment to see you. Everything happens the instant you're ready — no download, no setup.",
+    icon: <CameraIcon />,
+  },
+  {
+    step: '02',
+    title: 'AI Reads Your Mood',
+    body: 'One photo is enough. Our model recognizes seven core emotions in real time, right from your expression.',
+    icon: <FaceScanIcon />,
+  },
+  {
+    step: '03',
+    title: 'Get Matched Music',
+    body: "In seconds, EmoVibe hands you playlists and tracks tuned to exactly how you're feeling.",
+    icon: <MusicNoteIcon />,
+  },
+  {
+    step: '04',
+    title: 'Save What You Love',
+    body: 'Like a track, build a playlist, or run another detection and let your mood take you somewhere new.',
+    icon: <HeartLineIcon />,
+  },
+];
+
+// First three intentionally mirror HERO_FEATURES (same icons, fuller
+// copy) — the hero teases them, this section is where they're delivered
+// in full, plus three more.
+const FEATURE_CARDS = [
+  {
+    title: 'AI Face Recognition',
+    body: 'A lightweight model runs the moment you take a photo — right in your browser, no external hardware or noticeable lag.',
+    icon: <FaceScanIcon />,
+  },
+  {
+    title: 'Real-Time Emotion Detection',
+    body: 'Trained to recognize seven core emotions — happy, sad, angry, surprised, fearful, disgusted, and neutral — from a single expression.',
+    icon: <EmotionIcon />,
+  },
+  {
+    title: 'Mood-Based Recommendations',
+    body: 'Every detection returns a fresh set of tracks and playlists chosen to match, or gently shift, how you feel.',
+    icon: <MusicNoteIcon />,
+  },
+  {
+    title: 'Spotify Integration',
+    body: 'Connect your Spotify account for full-length playback, Premium-quality streaming, and one-click playlist imports.',
+    icon: <LinkIcon />,
+  },
+  {
+    title: 'Your Own Music Library',
+    body: "Like songs and build playlists, then revisit anything you've saved — all in one place, organized by mood.",
+    icon: <HeartLineIcon />,
+  },
+  {
+    title: 'Mood & Listening Insights',
+    body: 'Your profile tracks streaks, favorite moods, and time spent listening, so your patterns become visible over time.',
+    icon: <ChartIcon />,
+  },
+];
+
+const BENEFITS = [
+  {
+    title: 'Skip the scrolling',
+    body: "No more losing ten minutes to finding the right playlist. EmoVibe reads the moment and hands you music before you've finished sitting down.",
+  },
+  {
+    title: "Backed by Spotify's full catalog",
+    body: 'Not a limited built-in library — every recommendation pulls from Spotify itself, so the music is always real and always current.',
+  },
+  {
+    title: 'Watch your patterns emerge',
+    body: 'Your profile quietly tracks moods and listening habits over time, turning scattered sessions into a picture of how you actually feel, day to day.',
+  },
+  {
+    title: 'Free to start',
+    body: 'Create an account and get your first mood-matched playlist in under a minute — no credit card required.',
+  },
+];
+
+const STAT_HIGHLIGHTS = [
+  { value: '7', label: 'Core emotions recognized' },
+  { value: '<3s', label: 'Average detection time' },
+  { value: 'Unlimited', label: 'Spotify-powered catalog' },
+  { value: 'Free', label: 'To get started' },
 ];
 
 // Friendly copy for error codes the backend can send back via
@@ -454,7 +585,11 @@ const LandingPage = () => {
                 Get Started
                 <span>→</span>
               </button>
-              <button className="ev-btn ev-btn-outline">
+              <button
+                type="button"
+                className="ev-btn ev-btn-outline"
+                onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+              >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                   <path d="M6 4l14 8-14 8V4z" fill="currentColor" />
                 </svg>
@@ -836,6 +971,155 @@ const LandingPage = () => {
           "Music is the voice of the soul. We just help you find the right one." 🎵
         </p>
       </section>
+
+      {/* ===== How It Works ===== */}
+      <section className="ev-section" id="how-it-works">
+        <div className="ev-section-inner">
+          <div className="ev-section-head">
+            <span className="ev-eyebrow">How It Works</span>
+            <h2 className="ev-section-title">
+              From your face to your feed, <span className="ev-title-accent">in four steps.</span>
+            </h2>
+            <p className="ev-section-sub">
+              No forms to fill out and no genres to pre-select — just tell EmoVibe how you feel, one photo at a time.
+            </p>
+          </div>
+
+          <div className="ev-steps-row">
+            {HOW_IT_WORKS_STEPS.map((s) => (
+              <div className="ev-step-card" key={s.step}>
+                <span className="ev-step-icon-wrap">
+                  <span className="ev-step-icon">{s.icon}</span>
+                  <span className="ev-step-number">{s.step}</span>
+                </span>
+                <h3>{s.title}</h3>
+                <p>{s.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Features ===== */}
+      <section className="ev-section" id="features">
+        <div className="ev-section-inner">
+          <div className="ev-section-head">
+            <span className="ev-eyebrow">Features</span>
+            <h2 className="ev-section-title">
+              Everything you need, <span className="ev-title-accent">nothing you don't.</span>
+            </h2>
+            <p className="ev-section-sub">
+              The three ideas from above, in full — plus what happens after the music starts playing.
+            </p>
+          </div>
+
+          <div className="ev-features-grid">
+            {FEATURE_CARDS.map((f) => (
+              <div className="ev-feature-card" key={f.title}>
+                <span className="ev-feature-card-icon">{f.icon}</span>
+                <h3>{f.title}</h3>
+                <p>{f.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Benefits ===== */}
+      <section className="ev-section" id="benefits">
+        <div className="ev-section-inner">
+          <div className="ev-benefits-grid">
+            <div>
+              <div className="ev-section-head ev-section-head-left">
+                <span className="ev-eyebrow">Benefits</span>
+                <h2 className="ev-section-title">
+                  Why people <span className="ev-title-accent">stick with EmoVibe.</span>
+                </h2>
+              </div>
+
+              <ul className="ev-benefits-list">
+                {BENEFITS.map((b) => (
+                  <li key={b.title}>
+                    <span className="ev-benefit-check"><CheckIcon /></span>
+                    <div>
+                      <h3>{b.title}</h3>
+                      <p>{b.body}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="ev-stats-panel">
+              <p className="ev-stats-panel-label">EmoVibe at a glance</p>
+              <div className="ev-stats-grid">
+                {STAT_HIGHLIGHTS.map((s) => (
+                  <div className="ev-stat-item" key={s.label}>
+                    <p className="ev-stat-value">{s.value}</p>
+                    <p className="ev-stat-label">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="ev-btn ev-btn-primary ev-stats-cta"
+                onClick={() => (isLoggedIn ? navigate('/app') : openAuth('signup'))}
+              >
+                Get Started <span>→</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== About Me ===== */}
+      <section className="ev-section" id="about-me">
+        <div className="ev-section-inner">
+          <div className="ev-about-card">
+            <span className="ev-eyebrow">About Me</span>
+            <h2 className="ev-section-title">
+              Built for the moment music should <span className="ev-title-accent">feel like you.</span>
+            </h2>
+            <p>
+              EmoVibe started with a simple observation: the right song can change how a moment feels, but finding
+              it usually means scrolling past a dozen playlists that don't quite fit. So I paired a fast, in-browser
+              face reader with Spotify's catalog to close that gap — read the room, then hand you the music, without
+              the search.
+            </p>
+            <p>
+              I built and maintain EmoVibe on my own, for anyone who wants their music to keep up with how they
+              actually feel, not just what they searched for last week.
+            </p>
+            <button
+              type="button"
+              className="ev-btn ev-btn-outline"
+              onClick={() => (isLoggedIn ? navigate('/app') : openAuth('signup'))}
+            >
+              Join EmoVibe Free
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Footer ===== */}
+      <footer className="ev-footer">
+        <div className="ev-footer-inner">
+          <div className="ev-footer-brand">
+            <img src={logo} alt="EmoVibe" className="ev-footer-logo" />
+            <p>Your emotion. Our music. One perfect match.</p>
+          </div>
+
+          <nav className="ev-footer-links">
+            {NAV_LINKS.map((link) => (
+              <a key={link} href={`#${link.toLowerCase().replace(/\s+/g, '-')}`}>
+                {link}
+              </a>
+            ))}
+          </nav>
+
+          <p className="ev-footer-copyright">© {new Date().getFullYear()} EmoVibe. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   );
 };

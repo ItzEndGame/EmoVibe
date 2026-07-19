@@ -863,6 +863,8 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  align-items: center;
+  text-align: center;
   height: 100%;
 }
 
@@ -993,6 +995,363 @@
 }
 
 /* ===========================================================
+   Sections below the hero — shared header pattern
+   =========================================================== */
+
+.ev-section {
+  padding: 90px 28px;
+  border-top: 1px solid var(--ev-glass-border);
+}
+
+.ev-section-inner {
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+.ev-section-head {
+  max-width: 620px;
+  margin: 0 auto 56px;
+  text-align: center;
+}
+
+.ev-section-head-left {
+  text-align: left;
+  margin: 0 0 32px;
+  max-width: none;
+}
+
+.ev-eyebrow {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ev-lime);
+  margin-bottom: 14px;
+}
+
+.ev-section-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: clamp(2.1rem, 3.4vw, 2.9rem);
+  font-weight: 700;
+  line-height: 1.18;
+  margin-bottom: 14px;
+}
+
+.ev-title-accent {
+  background: var(--ev-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.ev-section-sub {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ev-text-muted);
+  margin: 0;
+}
+
+/* ===== How It Works ===== */
+
+.ev-steps-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px;
+}
+
+.ev-step-card {
+  background: var(--ev-glass);
+  border: 1px solid var(--ev-glass-border);
+  border-radius: var(--ev-radius-lg);
+  padding: 30px 22px 26px;
+  text-align: center;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.ev-step-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(143, 227, 77, 0.35);
+}
+
+.ev-step-icon-wrap {
+  position: relative;
+  display: block;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+}
+
+.ev-step-icon {
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--ev-glass-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ev-teal);
+}
+
+.ev-step-number {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--ev-gradient);
+  color: #04130a;
+  font-family: 'Baloo 2', 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 0.68rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ev-step-card h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.ev-step-card p {
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--ev-text-muted);
+  margin: 0;
+}
+
+/* ===== Features ===== */
+
+.ev-features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+.ev-feature-card {
+  background: var(--ev-glass);
+  border: 1px solid var(--ev-glass-border);
+  border-radius: var(--ev-radius-lg);
+  padding: 28px 24px;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.ev-feature-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(45, 212, 191, 0.35);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ev-feature-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--ev-glass-border);
+  color: var(--ev-lime);
+  margin-bottom: 18px;
+}
+
+.ev-feature-card h3 {
+  font-size: 1.08rem;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.ev-feature-card p {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--ev-text-muted);
+  margin: 0;
+}
+
+/* ===== Benefits ===== */
+
+.ev-benefits-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.ev-benefits-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.ev-benefits-list li {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.ev-benefit-check {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(143, 227, 77, 0.14);
+  border: 1px solid rgba(143, 227, 77, 0.35);
+  color: var(--ev-lime);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.ev-benefits-list h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.ev-benefits-list p {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--ev-text-muted);
+  margin: 0;
+}
+
+.ev-stats-panel {
+  background: linear-gradient(160deg, rgba(10, 24, 16, 0.82), rgba(6, 12, 10, 0.88));
+  border: 1px solid rgba(143, 227, 77, 0.18);
+  border-radius: var(--ev-radius-lg);
+  padding: 30px 26px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+.ev-stats-panel-label {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ev-text-faint);
+  margin: 0 0 22px;
+}
+
+.ev-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  margin-bottom: 26px;
+}
+
+.ev-stat-value {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: var(--ev-lime);
+  margin: 0 0 2px;
+  line-height: 1.1;
+}
+
+.ev-stat-label {
+  font-size: 0.78rem;
+  color: var(--ev-text-muted);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.ev-stats-cta {
+  width: 100%;
+}
+
+/* ===== About Us ===== */
+
+.ev-about-card {
+  max-width: 760px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.ev-about-card .ev-section-title {
+  margin-top: 4px;
+}
+
+.ev-about-card p {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ev-text-muted);
+  margin: 0 0 20px;
+}
+
+.ev-about-card .ev-btn {
+  margin-top: 8px;
+}
+
+/* ===== Footer ===== */
+
+.ev-footer {
+  border-top: 1px solid var(--ev-glass-border);
+  padding: 40px 28px 28px;
+}
+
+.ev-footer-inner {
+  max-width: 1320px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.ev-footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ev-footer-logo {
+  height: 34px;
+  width: auto;
+}
+
+.ev-footer-brand p {
+  font-size: 0.82rem;
+  color: var(--ev-text-faint);
+  margin: 0;
+}
+
+.ev-footer-links {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+
+.ev-footer-links a {
+  color: var(--ev-text-muted);
+  text-decoration: none;
+  font-size: 0.86rem;
+  transition: color 0.18s ease;
+}
+
+.ev-footer-links a:hover {
+  color: var(--ev-lime);
+}
+
+.ev-footer-copyright {
+  font-size: 0.78rem;
+  color: var(--ev-text-faint);
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  padding-top: 20px;
+  border-top: 1px solid var(--ev-glass-border);
+}
+
+/* ===========================================================
    Responsive
    =========================================================== */
 
@@ -1004,6 +1363,20 @@
   }
 
   .ev-mood-card { height: auto; }
+
+  .ev-section { padding: 72px 28px; }
+
+  .ev-steps-row,
+  .ev-features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ev-benefits-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .ev-stats-panel { max-width: 480px; }
 }
 
 @media (max-width: 860px) {
@@ -1087,10 +1460,30 @@
     scroll-snap-align: start;
     flex-direction: column;
     align-items: flex-start;
+    text-align: left;
     flex: 0 0 110px;
   }
 
   .ev-rec-art { width: 100%; height: 110px; }
+
+  .ev-section { padding: 60px 20px; }
+  .ev-section-head { margin-bottom: 40px; }
+
+  .ev-steps-row,
+  .ev-features-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .ev-stats-panel { max-width: 100%; }
+  .ev-stats-grid { gap: 16px; }
+
+  .ev-footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ev-footer-copyright { text-align: left; }
 }
 
 @media (max-width: 520px) {
@@ -1099,6 +1492,12 @@
   .ev-btn-primary, .ev-btn-ghost { padding: 11px 20px; font-size: 0.9rem; }
   .ev-auth-panel { padding: 26px 20px 22px; }
   .ev-auth-head h2 { font-size: 1.4rem; }
+
+  .ev-section { padding: 48px 16px; }
+  .ev-section-title { font-size: clamp(1.7rem, 8vw, 2.1rem); }
+  .ev-step-card,
+  .ev-feature-card { padding: 24px 18px; }
+  .ev-stats-panel { padding: 24px 18px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1109,4 +1508,6 @@
   .ev-auth-spinner { animation: none; }
   .ev-loader-logo, .ev-loader-bars span { animation: none; }
   .ev-loader { transition: none; }
+  .ev-step-card,
+  .ev-feature-card { transition: none; }
 }
