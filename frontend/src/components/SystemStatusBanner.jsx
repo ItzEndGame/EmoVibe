@@ -1,6 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const API_ROOT = (process.env.REACT_APP_API_URL || 'http://127.0.0.1:5000/api').replace(/\/api\/?$/, '');
+const getApiRoot = () => {
+  const configured = process.env.REACT_APP_API_URL;
+  if (configured) {
+    return configured.replace(/\/api\/?$/, '');
+  }
+
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return 'http://127.0.0.1:5000';
+  }
+
+  return '';
+};
+
+const API_ROOT = getApiRoot();
 const CHECK_INTERVAL_MS = 60000; // re-check every 60s while the issue persists
 
 /**

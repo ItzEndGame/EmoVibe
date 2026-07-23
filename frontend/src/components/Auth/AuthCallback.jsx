@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authAPI } from '../../services/api';
+import { authAPI, setAuthToken, setUser } from '../../services/api';
 
 /**
  * Catches redirects from Google OAuth.
@@ -13,30 +13,32 @@ const AuthCallback = () => {
   useEffect(() => {
     const run = async () => {
       const params = new URLSearchParams(window.location.search);
-      const accessToken = params.get('access_token');
-      const refreshToken = params.get('refresh_token');
       const errorCode = params.get('error');
 
-      if (!accessToken) {
-        navigate(`/login?error=${encodeURIComponent(errorCode || 'oauth_failed')}`);
+      if (errorCode) {
+        navigate(`/login?error=${encodeURIComponent(errorCode)}`);
         return;
       }
 
-      localStorage.setItem('access_token', accessToken);
-      if (refreshToken) {
-        localStorage.setItem('refresh_token', refreshToken);
-      }
+      window.history.replaceState({}, document.title, window.location.pathname);
 
       try {
         const result = await authAPI.validateToken();
-        if (result.success) {
-          localStorage.setItem('user', JSON.stringify(result.user));
+        if (result.success && result.user) {
+          // Only mark the session as valid AFTER it's actually confirmed —
+          // marking it first caused the api.js interceptor to treat a
+          // failed validation as an "expired session" instead of a fresh
+          // OAuth login that never authenticated.
+          setAuthToken('session');
+          setUser(result.user);
+          navigate('/app', { replace: true });
+          return;
         }
+        navigate('/login?error=google_session_failed');
       } catch (err) {
         console.error('Failed to fetch user after OAuth:', err);
+        navigate('/login?error=google_session_failed');
       }
-
-      navigate('/app');
     };
 
     run();

@@ -23,6 +23,8 @@ const LANGUAGES = [
   { value: 'english', label: '🇺🇸 English' },
   { value: 'hindi', label: '🇮🇳 Hindi' },
   { value: 'punjabi', label: '🇵🇦 Punjabi' },
+  { value: 'tamil', label: '🇮🇳 Tamil' },
+  { value: 'malayalam', label: '🇮🇳 Malayalam' },
   { value: 'spanish', label: '🇪🇸 Spanish' },
   { value: 'french', label: '🇫🇷 French' },
   { value: 'korean', label: '🇰🇷 Korean' },

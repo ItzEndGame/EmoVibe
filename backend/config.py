@@ -5,6 +5,21 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+
+def _get_cors_origins():
+    configured = os.getenv('CORS_ORIGINS', '')
+    if configured:
+        return [origin.strip() for origin in configured.split(',') if origin.strip()]
+
+    return [
+        os.getenv('FRONTEND_URL', 'http://localhost:3000'),
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:5173',
+        'http://127.0.0.1:5173'
+    ]
+
+
 class Config:
     """Base configuration class"""
 
@@ -14,8 +29,10 @@ class Config:
     DEBUG = FLASK_ENV == 'development'
 
     # Server Configuration
-    HOST = os.getenv('HOST', '127.0.0.1')
+    HOST = os.getenv('HOST', '0.0.0.0')
     PORT = int(os.getenv('PORT', 5000))
+    FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+    BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:5000')
 
     # Database Configuration (PostgreSQL — e.g. Supabase connection string)
     DATABASE_URL = os.getenv('DATABASE_URL')
@@ -25,11 +42,13 @@ class Config:
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key-change-in-production')
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=int(os.getenv('JWT_ACCESS_TOKEN_EXPIRES', 3600)))
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
+    COOKIE_SECURE = os.getenv('COOKIE_SECURE', 'False').lower() in ('1', 'true', 'yes')
+    COOKIE_SAMESITE = os.getenv('COOKIE_SAMESITE', 'Lax')
 
     # Spotify API Configuration (Client Credentials - for music search/recommendations)
     SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
     SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
-    SPOTIFY_REDIRECT_URI = os.getenv('SPOTIFY_REDIRECT_URI', 'http://127.0.0.1:5000/api/auth/spotify/callback')
+    SPOTIFY_REDIRECT_URI = os.getenv('SPOTIFY_REDIRECT_URI', f'{BACKEND_URL}/api/auth/spotify/callback')
 
     # Spotify OAuth Scopes (user-level)
     SPOTIFY_SCOPES = 'user-read-private user-read-email streaming user-modify-playback-state user-library-read'
@@ -37,7 +56,7 @@ class Config:
     # Google OAuth Configuration
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
-    GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://127.0.0.1:5000/api/auth/google/callback')
+    GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', f'{BACKEND_URL}/api/auth/google/callback')
 
     # Email (Gmail SMTP) - used for password reset codes
     SMTP_EMAIL = os.getenv('SMTP_EMAIL')
@@ -74,12 +93,7 @@ class Config:
     DEFAULT_PROFILE_PICTURE = 'default_avatar.png'
 
     # CORS Configuration
-    CORS_ORIGINS = [
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-        'http://localhost:5173',  # Vite dev server
-        'http://127.0.0.1:5173'
-    ]
+    CORS_ORIGINS = _get_cors_origins()
 
     # Emotion to Genre Mapping
     # NOTE: keys must exactly match the model's output labels in
@@ -102,6 +116,8 @@ class Config:
         'english': 'US',
         'hindi': 'IN',
         'punjabi': 'IN',
+        'tamil': 'IN',
+        'malayalam': 'IN',
         'spanish': 'ES',
         'french': 'FR',
         'korean': 'KR',
@@ -138,6 +154,26 @@ class Config:
             'fear': ['punjabi', 'instrumental'],
             'disgust': ['punjabi hip hop'],
             'excited': ['bhangra', 'punjabi dance', 'punjabi pop']
+        },
+        'tamil': {
+            'happy': ['tamil pop', 'kollywood', 'tamil film songs'],
+            'sad': ['tamil', 'kollywood sad songs', 'tamil melody'],
+            'angry': ['tamil hip hop', 'kollywood mass'],
+            'neutral': ['tamil', 'tamil chill', 'kollywood melody'],
+            'surprise': ['kollywood dance', 'tamil pop'],
+            'fear': ['tamil instrumental', 'tamil classical'],
+            'disgust': ['tamil hip hop', 'kollywood mass'],
+            'excited': ['kollywood dance', 'tamil pop']
+        },
+        'malayalam': {
+            'happy': ['malayalam pop', 'mollywood', 'malayalam film songs'],
+            'sad': ['malayalam', 'mollywood sad songs', 'malayalam melody'],
+            'angry': ['malayalam hip hop', 'mollywood mass'],
+            'neutral': ['malayalam', 'malayalam chill', 'mollywood melody'],
+            'surprise': ['mollywood dance', 'malayalam pop'],
+            'fear': ['malayalam instrumental'],
+            'disgust': ['malayalam hip hop'],
+            'excited': ['mollywood dance', 'malayalam pop']
         },
         'korean': {
             'happy': ['k-pop', 'korean pop'],

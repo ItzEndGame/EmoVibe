@@ -11,26 +11,15 @@ db = DatabaseHelper()
 
 
 @spotify_connect_bp.route('/login', methods=['GET'])
+@jwt_required()
 def spotify_login():
     """
     Initiate Spotify OAuth for an already logged-in EmoTune user.
     This connects their Spotify account for playback — not for registration.
-
-    This is a full-page redirect (not an axios call), so the frontend can't
-    attach an Authorization header. Instead, the JWT is passed as a `jwt`
-    query parameter and decoded manually here.
     """
-    token = request.args.get('jwt')
-
-    if not token:
-        return redirect('http://localhost:3000/app?spotify=missing_token')
-
-    try:
-        decoded = decode_token(token)
-        user_id = decoded['sub']
-    except Exception as e:
-        print(f"Invalid JWT on spotify_login: {str(e)}")
-        return redirect('http://localhost:3000/app?spotify=invalid_token')
+    user_id = get_jwt_identity()
+    if not user_id:
+        return redirect(f'{Config.FRONTEND_URL}/app?spotify=missing_token')
 
     params = {
         'client_id': Config.SPOTIFY_CLIENT_ID,
@@ -53,10 +42,10 @@ def spotify_callback():
         user_id = request.args.get('state')  # We passed user_id as state
 
         if error:
-            return redirect('http://localhost:3000/app?spotify=denied')
+            return redirect(f'{Config.FRONTEND_URL}/app?spotify=denied')
 
         if not code or not user_id:
-            return redirect('http://localhost:3000/app?spotify=failed')
+            return redirect(f'{Config.FRONTEND_URL}/app?spotify=failed')
 
         # Exchange code for tokens
         token_response = http_requests.post('https://accounts.spotify.com/api/token', data={
@@ -79,22 +68,22 @@ def spotify_callback():
                 f"Spotify token exchange failed (HTTP {token_response.status_code}): "
                 f"{token_response.text[:150] or '(empty body)'}"
             )
-            return redirect(f'http://localhost:3000/app?spotify=token_failed&detail={detail}')
+            return redirect(f'{Config.FRONTEND_URL}/app?spotify=token_failed&detail={detail}')
 
         if not token_response.text.strip():
             print("Spotify token exchange returned 200 with an empty body")
-            return redirect('http://localhost:3000/app?spotify=error&detail=Spotify+returned+an+empty+response+during+token+exchange')
+            return redirect(f'{Config.FRONTEND_URL}/app?spotify=error&detail=Spotify+returned+an+empty+response+during+token+exchange')
 
         token_data = token_response.json()
 
         if 'error' in token_data:
             print(f"Spotify token error: {token_data}")
-            return redirect('http://localhost:3000/app?spotify=token_failed')
+            return redirect(f'{Config.FRONTEND_URL}/app?spotify=token_failed')
 
         missing = [k for k in ('access_token', 'refresh_token', 'expires_in') if k not in token_data]
         if missing:
             print(f"Spotify token response missing fields {missing}: {token_data}")
-            return redirect('http://localhost:3000/app?spotify=token_incomplete')
+            return redirect(f'{Config.FRONTEND_URL}/app?spotify=token_incomplete')
 
         access_token = token_data['access_token']
         refresh_token = token_data['refresh_token']
@@ -113,12 +102,12 @@ def spotify_callback():
                 f"Spotify profile fetch failed (HTTP {profile_response.status_code}): "
                 f"{profile_response.text[:150] or '(empty body)'}"
             )
-            return redirect(f'http://localhost:3000/app?spotify=profile_failed&detail={detail}')
+            return redirect(f'{Config.FRONTEND_URL}/app?spotify=profile_failed&detail={detail}')
 
         spotify_profile = profile_response.json()
 
         if 'error' in spotify_profile:
-            return redirect('http://localhost:3000/app?spotify=profile_failed')
+            return redirect(f'{Config.FRONTEND_URL}/app?spotify=profile_failed')
 
         spotify_user_id = spotify_profile.get('id')
         is_premium = spotify_profile.get('product') == 'premium'
@@ -150,7 +139,7 @@ def spotify_callback():
         )
 
         premium_param = 'true' if is_premium else 'false'
-        return redirect(f'http://localhost:3000/app?spotify=connected&premium={premium_param}')
+        return redirect(f'{Config.FRONTEND_URL}/app?spotify=connected&premium={premium_param}')
 
     except Exception as e:
         print(f"Error in spotify_callback: {str(e)}")
@@ -158,7 +147,7 @@ def spotify_callback():
         # show the real reason instead of just a bare "error" flag — saves
         # a terminal-log round trip for every future failure here.
         error_detail = urllib.parse.quote(str(e)[:200])
-        return redirect(f'http://localhost:3000/app?spotify=error&detail={error_detail}')
+        return redirect(f'{Config.FRONTEND_URL}/app?spotify=error&detail={error_detail}')
 
 
 @spotify_connect_bp.route('/status', methods=['GET'])

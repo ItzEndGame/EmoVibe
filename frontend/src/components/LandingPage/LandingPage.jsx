@@ -196,6 +196,13 @@ const STAT_HIGHLIGHTS = [
 // /login?error=<code> after a failed Google OAuth attempt.
 const OAUTH_ERROR_MESSAGES = {
   oauth_failed: 'Google sign-in failed. Please try again.',
+  google_denied: 'Google sign-in was cancelled. Please try again if you want to continue.',
+  google_failed: 'Google sign-in did not return a valid response. Please try again.',
+  google_token_failed: 'Google sign-in could not be completed on the server. Please try again.',
+  google_userinfo_failed: 'Google sign-in could not read your profile. Please try again.',
+  user_creation_failed: 'We could not create your account from Google. Please try again.',
+  server_error: 'Google sign-in hit an unexpected server error. Please try again.',
+  google_session_failed: "Google sign-in went through, but we couldn't start your session. This usually means the login cookie wasn't accepted — please try again.",
   email_exists: 'An account with this email already exists. Please log in with your email and password instead.',
   account_exists: 'An account with this email already exists. Please log in with your email and password instead.',
   email_taken: 'An account with this email already exists. Please log in with your email and password instead.',
@@ -289,6 +296,13 @@ const LandingPage = () => {
     setLoginError('');
     setRegError('');
     navigate(tab === 'signup' ? '/register' : '/login');
+
+    // The auth panel lives inside the hero section, so if this was
+    // triggered from a lower section (About Me, Benefits, etc.), scroll
+    // back up so the panel is actually visible.
+    requestAnimationFrame(() => {
+      document.getElementById('home')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   };
 
   const closeAuth = () => {
@@ -304,8 +318,7 @@ const LandingPage = () => {
     try {
       const res = await authAPI.login({ email: loginData.email, password: loginData.password });
       if (res.success) {
-        setAuthToken(res.access_token);
-        if (res.refresh_token) localStorage.setItem('refresh_token', res.refresh_token);
+        setAuthToken('session');
         setUser(res.user);
         setTimeout(() => navigate('/app'), 100);
       }
@@ -331,7 +344,7 @@ const LandingPage = () => {
         preferred_genres: regGenres.join(', '),
       });
       if (res.success) {
-        localStorage.setItem('access_token', res.access_token.trim());
+        setAuthToken('session');
         localStorage.setItem('user', JSON.stringify(res.user));
         setTimeout(() => navigate('/app'), 100);
       }
@@ -401,6 +414,11 @@ const LandingPage = () => {
   // /register (e.g. a bookmarked link, or AuthCallback bouncing back here
   // after a failed Google sign-in).
   useEffect(() => {
+    if (isLoggedIn) {
+      navigate('/app', { replace: true });
+      return;
+    }
+
     const params = new URLSearchParams(location.search);
     if (location.pathname === '/login') {
       setAuthTab('login');
@@ -414,7 +432,7 @@ const LandingPage = () => {
       setAuthOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+  }, [isLoggedIn, location.pathname, navigate]);
 
   // Preload the hero imagery + fonts before showing the page so the
   // first paint doesn't pop in piecemeal.

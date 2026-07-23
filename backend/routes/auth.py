@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, redirect
+from flask import Blueprint, request, jsonify, redirect, make_response
 from flask_jwt_extended import (
     create_access_token, create_refresh_token,
     jwt_required, get_jwt_identity
@@ -10,6 +10,52 @@ import requests as http_requests
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 db = DatabaseHelper()
+
+
+def _cookie_options():
+    return {
+        'httponly': True,
+        'secure': Config.COOKIE_SECURE,
+        'samesite': Config.COOKIE_SAMESITE,
+        'path': '/',
+    }
+
+
+def _set_auth_cookies(response, access_token, refresh_token):
+    response.set_cookie(
+        'access_token_cookie',
+        access_token,
+        max_age=int(Config.JWT_ACCESS_TOKEN_EXPIRES.total_seconds()),
+        **_cookie_options()
+    )
+    response.set_cookie(
+        'refresh_token_cookie',
+        refresh_token,
+        max_age=int(Config.JWT_REFRESH_TOKEN_EXPIRES.total_seconds()),
+        **_cookie_options()
+    )
+    return response
+
+
+def _clear_auth_cookies(response):
+    response.set_cookie('access_token_cookie', '', expires=0, path='/', httponly=True, secure=Config.COOKIE_SECURE, samesite=Config.COOKIE_SAMESITE)
+    response.set_cookie('refresh_token_cookie', '', expires=0, path='/', httponly=True, secure=Config.COOKIE_SECURE, samesite=Config.COOKIE_SAMESITE)
+    return response
+
+
+def _resolve_google_redirect_uri():
+    configured = (Config.GOOGLE_REDIRECT_URI or '').strip()
+    if configured:
+        # If the configured redirect is a loopback value, follow the host that the
+        # browser actually used for this request so Google accepts the callback.
+        if '127.0.0.1' in configured or 'localhost' in configured:
+            host = request.host or request.headers.get('Host') or ''
+            if host:
+                scheme = 'https' if request.is_secure else 'http'
+                return f'{scheme}://{host}/api/auth/google/callback'
+        return configured
+
+    return f'{Config.BACKEND_URL}/api/auth/google/callback'
 
 
 # ==================== EMAIL AUTH ====================
@@ -49,11 +95,9 @@ def register():
         access_token = create_access_token(identity=user_id)
         refresh_token = create_refresh_token(identity=user_id)
 
-        return jsonify({
+        response = make_response(jsonify({
             'success': True,
             'message': 'Account created successfully',
-            'access_token': access_token,
-            'refresh_token': refresh_token,
             'user': {
                 'id': user['id'],
                 'name': user['name'],
@@ -62,7 +106,8 @@ def register():
                 'preferred_genres': user.get('preferred_genres'),
                 'auth_provider': user.get('auth_provider', 'email')
             }
-        }), 201
+        }), 201)
+        return _set_auth_cookies(response, access_token, refresh_token)
 
     except Exception as e:
         print(f"Error in register: {str(e)}")
@@ -94,11 +139,9 @@ def login():
         access_token = create_access_token(identity=user['id'])
         refresh_token = create_refresh_token(identity=user['id'])
 
-        return jsonify({
+        response = make_response(jsonify({
             'success': True,
             'message': 'Login successful',
-            'access_token': access_token,
-            'refresh_token': refresh_token,
             'user': {
                 'id': user['id'],
                 'name': user['name'],
@@ -107,7 +150,8 @@ def login():
                 'preferred_genres': user.get('preferred_genres'),
                 'auth_provider': user.get('auth_provider', 'email')
             }
-        }), 200
+        }), 200)
+        return _set_auth_cookies(response, access_token, refresh_token)
 
     except Exception as e:
         print(f"Error in login: {str(e)}")
@@ -120,10 +164,18 @@ def refresh():
     try:
         current_user_id = get_jwt_identity()
         new_access_token = create_access_token(identity=current_user_id)
-        return jsonify({'success': True, 'access_token': new_access_token}), 200
+        refresh_token = request.cookies.get('refresh_token_cookie', '')
+        response = make_response(jsonify({'success': True, 'access_token': new_access_token}), 200)
+        return _set_auth_cookies(response, new_access_token, refresh_token)
     except Exception as e:
         print(f"Error in refresh: {str(e)}")
         return jsonify({'success': False, 'message': 'Internal server error'}), 500
+
+
+@auth_bp.route('/logout', methods=['POST'])
+def logout():
+    response = make_response(jsonify({'success': True, 'message': 'Logged out'}), 200)
+    return _clear_auth_cookies(response)
 
 
 @auth_bp.route('/validate-token', methods=['GET'])
@@ -184,8 +236,8 @@ def forgot_password():
 
         if not email_sent:
             # Still log it server-side as a fallback so testing isn't blocked
-            # if SMTP isn't configured yet, but don't expose it to the client.
-            print(f"🔑 (Email send failed) Reset code for {data['email']}: {reset_code}")
+            # if SMTP isn't configured yet, but avoid exposing the reset code.
+            print(f"⚠️ Password reset email could not be sent for {data['email']}; check SMTP configuration.")
 
         return jsonify({
             'success': True,
@@ -245,10 +297,11 @@ def reset_password():
 @auth_bp.route('/google/login', methods=['GET'])
 def google_login():
     """Redirect user to Google OAuth consent screen"""
+    redirect_uri = _resolve_google_redirect_uri()
     google_auth_url = (
         'https://accounts.google.com/o/oauth2/v2/auth'
         f'?client_id={Config.GOOGLE_CLIENT_ID}'
-        f'&redirect_uri={Config.GOOGLE_REDIRECT_URI}'
+        f'&redirect_uri={redirect_uri}'
         '&response_type=code'
         '&scope=openid email profile'
         '&access_type=offline'
@@ -264,24 +317,29 @@ def google_callback():
         error = request.args.get('error')
 
         if error:
-            return redirect('http://localhost:3000/login?error=google_denied')
+            return redirect(f'{Config.FRONTEND_URL}/login?error=google_denied')
 
         if not code:
-            return redirect('http://localhost:3000/login?error=google_failed')
+            return redirect(f'{Config.FRONTEND_URL}/login?error=google_failed')
 
+        redirect_uri = _resolve_google_redirect_uri()
         token_response = http_requests.post('https://oauth2.googleapis.com/token', data={
             'code': code,
             'client_id': Config.GOOGLE_CLIENT_ID,
             'client_secret': Config.GOOGLE_CLIENT_SECRET,
-            'redirect_uri': Config.GOOGLE_REDIRECT_URI,
+            'redirect_uri': redirect_uri,
             'grant_type': 'authorization_code'
-        })
+        }, timeout=15)
+
+        if token_response.status_code != 200:
+            print(f"Google token exchange failed: {token_response.status_code} {token_response.text}")
+            return redirect(f'{Config.FRONTEND_URL}/login?error=google_token_failed')
 
         token_data = token_response.json()
 
         if 'error' in token_data:
             print(f"Google token error: {token_data}")
-            return redirect('http://localhost:3000/login?error=google_token_failed')
+            return redirect(f'{Config.FRONTEND_URL}/login?error=google_token_failed')
 
         user_info_response = http_requests.get('https://www.googleapis.com/oauth2/v2/userinfo', headers={
             'Authorization': f"Bearer {token_data['access_token']}"
@@ -290,7 +348,7 @@ def google_callback():
         google_user = user_info_response.json()
 
         if 'error' in google_user:
-            return redirect('http://localhost:3000/login?error=google_userinfo_failed')
+            return redirect(f'{Config.FRONTEND_URL}/login?error=google_userinfo_failed')
 
         google_id = google_user.get('id')
         email = google_user.get('email')
@@ -313,21 +371,17 @@ def google_callback():
             )
 
         if not user_id:
-            return redirect('http://localhost:3000/login?error=user_creation_failed')
+            return redirect(f'{Config.FRONTEND_URL}/login?error=user_creation_failed')
 
         access_token = create_access_token(identity=user_id)
         refresh_token = create_refresh_token(identity=user_id)
 
-        return redirect(
-            f'http://localhost:3000/auth/callback'
-            f'?access_token={access_token}'
-            f'&refresh_token={refresh_token}'
-            f'&provider=google'
-        )
+        response = redirect(f'{Config.FRONTEND_URL}/auth/callback?provider=google')
+        return _set_auth_cookies(response, access_token, refresh_token)
 
     except Exception as e:
         print(f"Error in google_callback: {str(e)}")
-        return redirect('http://localhost:3000/login?error=server_error')
+        return redirect(f'{Config.FRONTEND_URL}/login?error=server_error')
 
 
 @auth_bp.route('/google/token', methods=['POST'])

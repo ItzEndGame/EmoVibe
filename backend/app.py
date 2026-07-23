@@ -16,6 +16,18 @@ from routes.notifications import notifications_bp
 def create_app(config_name='development'):
     app = Flask(__name__)
     app.config.from_object(Config)
+    app.config.update(
+        JWT_SECRET_KEY=Config.JWT_SECRET_KEY,
+        JWT_ACCESS_TOKEN_EXPIRES=Config.JWT_ACCESS_TOKEN_EXPIRES,
+        JWT_REFRESH_TOKEN_EXPIRES=Config.JWT_REFRESH_TOKEN_EXPIRES,
+        JWT_TOKEN_LOCATION=['headers', 'cookies'],
+        JWT_COOKIE_SECURE=Config.COOKIE_SECURE,
+        JWT_COOKIE_HTTPONLY=True,
+        JWT_COOKIE_SAMESITE=Config.COOKIE_SAMESITE,
+        JWT_COOKIE_CSRF_PROTECT=False,
+        JWT_ACCESS_COOKIE_NAME='access_token_cookie',
+        JWT_REFRESH_COOKIE_NAME='refresh_token_cookie'
+    )
     Config.init_app(app)
 
     CORS(app,

@@ -27,6 +27,7 @@ const MainApp = () => {
   const [selectedMood, setSelectedMood] = useState(null);
   const [language, setLanguage] = useState('english');
   const [autoplay, setAutoplay] = useState(false);
+  const [explicitContent, setExplicitContent] = useState(true);
   const [error, setError] = useState('');
   const [loadingMusic, setLoadingMusic] = useState(false);
   const [showWebcam, setShowWebcam] = useState(false);
@@ -171,13 +172,13 @@ const MainApp = () => {
   
 
   // Update fetchMusicRecommendations to show first 8 songs
-const fetchMusicRecommendations = async (emotion, lang = language) => {
+const fetchMusicRecommendations = async (emotion, lang = language, explicit = explicitContent) => {
   setLoadingMusic(true);
   setHasMore(true);
   setVisibleCount(0);
   stopTracking(); // a fresh fetch means whatever card was playing is no longer active
   try {
-    const response = await musicAPI.getRecommendations(emotion.toLowerCase(), lang, 8, [], sortMode);
+    const response = await musicAPI.getRecommendations(emotion.toLowerCase(), lang, 8, [], sortMode, explicit);
 
     if (response.success && response.tracks) {
       setRecommendations(response.tracks);
@@ -216,7 +217,8 @@ const handleRefreshSongs = async () => {
       language,
       8,
       currentIds,
-      sortMode
+      sortMode,
+      explicitContent
     );
 
     if (response.success && response.tracks && response.tracks.length > 0) {
@@ -226,7 +228,7 @@ const handleRefreshSongs = async () => {
     } else {
       // Nothing new came back (pool exhausted) — fall back to a plain
       // re-fetch without exclusions so the button doesn't feel broken.
-      const fallback = await musicAPI.getRecommendations(selectedMood.toLowerCase(), language, 8, [], sortMode);
+      const fallback = await musicAPI.getRecommendations(selectedMood.toLowerCase(), language, 8, [], sortMode, explicitContent);
       if (fallback.success && fallback.tracks) {
         setRecommendations(fallback.tracks);
         setHasMore(fallback.has_more !== false);
@@ -250,7 +252,8 @@ const handleLoadMore = async () => {
       language,
       8,
       alreadyShownIds,
-      sortMode
+      sortMode,
+      explicitContent
     );
 
     if (response.success && response.tracks && response.tracks.length > 0) {
@@ -293,12 +296,26 @@ const handleLoadMore = async () => {
     let cancelled = false;
 
     const init = async () => {
+      // Populated from the preferences response below, then used directly
+      // (not via state) for the default-mood auto-fetch further down —
+      // setState calls haven't applied yet within this same tick, so
+      // reading `language`/`explicitContent` from the closure here would
+      // still see their stale initial values.
+      let loadedLanguage = language;
+      let loadedExplicitContent = explicitContent;
+      let loadedDefaultEmotion = null;
+
       try {
         const res = await preferencesAPI.get();
         const p = res.preferences || {};
         if (!cancelled) {
-          if (p.language) setLanguage(p.language);
+          if (p.language) { setLanguage(p.language); loadedLanguage = p.language; }
           if (typeof p.autoplay === 'boolean') setAutoplay(p.autoplay);
+          if (typeof p.explicit_content === 'boolean') {
+            setExplicitContent(p.explicit_content);
+            loadedExplicitContent = p.explicit_content;
+          }
+          if (p.default_emotion) loadedDefaultEmotion = p.default_emotion;
         }
       } catch (err) {
         console.warn('Could not load preferences — using defaults:', err);
@@ -309,7 +326,20 @@ const handleLoadMore = async () => {
       // ---- Router-state handling (unchanged logic, just sequenced after
       // preferences load) ----
       const navState = location.state;
-      if (!navState?.method) return;
+
+      if (!navState?.method) {
+        // Plain visit to the app (no method/mood handed off by Dashboard).
+        // Apply the user's default mood, if they set one, so the screen
+        // isn't just empty — and so the existing autoplay effect
+        // (which only fires once `recommendations` is populated) actually
+        // has a first recommendation to autoplay on entry.
+        if (loadedDefaultEmotion) {
+          setSelectedMood(loadedDefaultEmotion);
+          moodTracker.saveMood(loadedDefaultEmotion);
+          fetchMusicRecommendations(loadedDefaultEmotion, loadedLanguage, loadedExplicitContent);
+        }
+        return;
+      }
 
       if (navState.method === 'camera') {
         setShowWebcam(true);
@@ -360,7 +390,7 @@ const handleSortChange = (e) => {
     setHasMore(true);
     setVisibleCount(0);
     stopTracking();
-    musicAPI.getRecommendations(selectedMood.toLowerCase(), language, 8, [], newSort)
+    musicAPI.getRecommendations(selectedMood.toLowerCase(), language, 8, [], newSort, explicitContent)
       .then((response) => {
         if (response.success && response.tracks) {
           setRecommendations(response.tracks);

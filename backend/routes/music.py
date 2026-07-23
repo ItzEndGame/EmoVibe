@@ -117,6 +117,13 @@ def get_recommendations(emotion):
         exclude_ids_param = request.args.get('exclude_ids', '')
         exclude_ids = set(x.strip() for x in exclude_ids_param.split(',') if x.strip())
 
+        # Explicit content toggle (Settings > Music Preferences). Defaults
+        # to allowed, matching the frontend's default state, so an old
+        # cached frontend build that doesn't send this param yet still
+        # behaves exactly as it does today.
+        explicit_content_param = request.args.get('explicit_content', 'true').lower()
+        allow_explicit = explicit_content_param not in ('false', '0', 'no')
+
         # Validate emotion
         emotion = emotion.lower()
         if emotion not in Config.EMOTION_GENRE_MAP:
@@ -200,6 +207,8 @@ def get_recommendations(emotion):
                             continue
                         if track['id'] in exclude_ids:
                             continue
+                        if not allow_explicit and track.get('explicit'):
+                            continue
 
                         signature = (
                             track['name'].strip().lower(),
@@ -264,7 +273,8 @@ def get_recommendations(emotion):
                     'preview_url': track['preview_url'],
                     'external_url': track['external_urls']['spotify'],
                     'duration_ms': track['duration_ms'],
-                    'popularity': track['popularity']
+                    'popularity': track['popularity'],
+                    'explicit': track.get('explicit', False)
                 }
                 tracks.append(track_data)
 
@@ -277,6 +287,7 @@ def get_recommendations(emotion):
                 'total': len(tracks),
                 'genres_used': genres,
                 'sort': sort_mode,
+                'explicit_content': allow_explicit,
                 'has_more': len(pool_list) > limit  # hint for frontend whether more might be available right now
             }), 200
 

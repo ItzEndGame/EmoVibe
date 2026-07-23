@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useListeningHeartbeat } from '../components/Spotify/useListeningHeartbeat';
 import { useSpotifyPlayer } from '../components/Spotify/useSpotifyPlayer';
+import { playbackCoordinator } from '../utils/playbackSync'; // adjust path to wherever you place playbackSync.js
 
 /**
  * Holds the "currently playing" track for the whole app.
@@ -95,6 +96,45 @@ export const PlayerProvider = ({ children }) => {
   useEffect(() => {
     return () => stopTracking();
   }, [stopTracking]);
+
+  // ===== Cross-tab playback coordination =====
+  // Same account open in two tabs shouldn't play two songs at once.
+  // Mirrors CurrentlyPlayingBar's own usingSdk check — same track needs
+  // spotify_uri, and the account needs to actually be Premium + SDK-ready.
+  const usingSdk = spotifyPlayer.isPremium && spotifyPlayer.isReady && !!currentTrack?.spotify_uri;
+  const sdkIsPlaying = usingSdk && spotifyPlayer.playbackState && !spotifyPlayer.playbackState.paused;
+
+  // 1. Announce to other tabs whenever THIS tab is actually producing sound.
+  //    SDK path: only when player_state_changed reports paused=false.
+  //    Embed/preview path: the iframe autoplays the instant a track is set
+  //    (see CurrentlyPlayingBar), and there's no real "paused" signal to
+  //    read back from it, so "a track is loaded and it's not the SDK path"
+  //    is the best available proxy — same assumption useListeningHeartbeat
+  //    already makes for its estimated listening time.
+  useEffect(() => {
+    if (usingSdk) {
+      if (sdkIsPlaying) playbackCoordinator.announcePlaying(currentTrack?.id);
+    } else if (currentTrack) {
+      playbackCoordinator.announcePlaying(currentTrack.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usingSdk, sdkIsPlaying, currentTrack?.id]);
+
+  // 2. When ANOTHER tab announces it started playing, stop this tab.
+  useEffect(() => {
+    playbackCoordinator.onOtherTabPlaying(() => {
+      if (usingSdk) {
+        // Real pause control — only toggle if we're actually mid-playback.
+        if (sdkIsPlaying) spotifyPlayer.togglePlay();
+      } else if (currentTrack) {
+        // No pause API on the cross-origin embed iframe — unmounting it
+        // (by clearing the track) is the only way to actually stop the
+        // sound. This also stops the listening-time heartbeat cleanly.
+        clearTrack();
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usingSdk, sdkIsPlaying, currentTrack, clearTrack, spotifyPlayer]);
 
   const value = {
     currentTrack,

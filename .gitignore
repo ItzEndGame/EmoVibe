@@ -24,7 +24,7 @@ frontend/dist/.env
 backend/__pycache__/
 backend/*.pyc
 backend/.env
-
+tests
 # IDE files
 .vscode/
 .idea/

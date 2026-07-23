@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
-import { emotionAPI, musicAPI,notificationsAPI, getUser } from '../../services/api';
+import { emotionAPI, musicAPI, notificationsAPI, preferencesAPI, getUser } from '../../services/api';
 import SpotifyConnectBanner from '../Spotify/SpotifyConnectBanner';
 import { usePlayer } from '../../context/PlayerContext';
 
@@ -87,7 +87,16 @@ const Dashboard = () => {
   const [lastLiked, setLastLiked] = useState(null);
   const [lastLikedLoading, setLastLikedLoading] = useState(true);
   const [unliking, setUnliking] = useState(false);
-  const { currentTrack, setCurrentTrack } = usePlayer(); // shared with AppShell so playback survives navigating away
+  const { currentTrack, setCurrentTrack, playTrack } = usePlayer(); // shared with AppShell so playback survives navigating away
+
+  // Ref mirror of currentTrack for the autoplay check in loadPlaylists below —
+  // using the ref (not currentTrack itself) keeps loadPlaylists' identity
+  // stable, so it doesn't refetch/re-autoplay every time playback state
+  // changes elsewhere in the app.
+  const currentTrackRef = useRef(null);
+  useEffect(() => {
+    currentTrackRef.current = currentTrack;
+  }, [currentTrack]);
 
   // Streaks
   const [currentStreak, setCurrentStreak] = useState(null);
@@ -99,11 +108,12 @@ const Dashboard = () => {
 
   /* ---------------------------- Data fetching ---------------------------- */
 
-  const loadRecentDetections = useCallback(async () => {
+  const loadRecentDetections = useCallback(async (isCancelled = () => false) => {
     setRecentLoading(true);
     setRecentError('');
     try {
       const res = await emotionAPI.getHistory(5);
+      if (isCancelled()) return;
       const raw = res.history || res.detections || res.data || [];
       const normalized = raw.map((item, idx) => ({
         id: item.id ?? idx,
@@ -113,53 +123,89 @@ const Dashboard = () => {
       }));
       setRecentDetections(normalized);
     } catch (err) {
+      if (isCancelled()) return;
       console.error('Failed to load emotion history:', err);
       setRecentError("Couldn't load your recent detections.");
     } finally {
-      setRecentLoading(false);
+      if (!isCancelled()) setRecentLoading(false);
     }
   }, []);
 
-  const loadPlaylists = useCallback(async () => {
+  const loadPlaylists = useCallback(async (isCancelled = () => false) => {
     setPlaylistsLoading(true);
     setPlaylistsError('');
     try {
-      // Prefer the user's favorite mood so recommendations feel personal;
-      // fall back to a pleasant default if that endpoint has no data yet.
-      let seedMood = 'happy';
+      // Load saved preferences first. An explicit default mood/language the
+      // user picked in Settings is a direct signal and should win over the
+      // inferred "favorite mood" below — otherwise changing Settings would
+      // never actually change what shows up here.
+      let prefs = {};
       try {
-        const favRes = await emotionAPI.getFavoriteMood();
-        seedMood = (favRes.favorite_mood?.emotion || seedMood).toLowerCase();
+        const prefsRes = await preferencesAPI.get();
+        prefs = prefsRes.preferences || {};
       } catch {
-        // Not fatal — just use the default seed mood.
+        // Not fatal — falls through to the favorite-mood/english/allow-explicit defaults below.
       }
+
+      if (isCancelled()) return;
+
+      let seedMood = prefs.default_emotion;
+      if (!seedMood) {
+        // No explicit default set — fall back to the user's historical
+        // favorite mood so this still feels personal, then to 'happy'.
+        seedMood = 'happy';
+        try {
+          const favRes = await emotionAPI.getFavoriteMood();
+          seedMood = (favRes.favorite_mood?.emotion || seedMood).toLowerCase();
+        } catch {
+          // Not fatal — just use the default seed mood.
+        }
+      }
+
+      if (isCancelled()) return;
       setPlaylistsMood(seedMood);
+
+      const seedLanguage = prefs.language || 'english';
+      const allowExplicit = typeof prefs.explicit_content === 'boolean' ? prefs.explicit_content : true;
 
       // Uses the same recommendations endpoint MainApp's track list already
       // relies on (confirmed shape: { success, tracks, has_more }), rather
       // than the mood-playlists endpoint, whose response shape wasn't
       // actually verified anywhere and was only returning a single item.
-      const res = await musicAPI.getRecommendations(seedMood, 'english', 8);
+      const res = await musicAPI.getRecommendations(seedMood, seedLanguage, 8, [], 'relevance', allowExplicit);
+      if (isCancelled()) return;
+
       const raw = res.tracks || [];
       const normalized = raw.map((track, idx) => ({
         id: track.id ?? idx,
         title: track.title || 'Untitled',
         artist: track.artist || 'Unknown artist',
         cover: track.album_art || null,
+        spotify_uri: `spotify:track:${track.id}`,
       }));
       setPlaylists(normalized);
+
+      // Autoplay preference: start the first recommendation automatically
+      // on entry to the app, same as MainApp's detect flow — but only if
+      // nothing is already playing (e.g. carried over from a previous
+      // session), so this never interrupts existing playback.
+      if (prefs.autoplay && !currentTrackRef.current && normalized.length > 0) {
+        playTrack(normalized[0], normalized, 0);
+      }
     } catch (err) {
+      if (isCancelled()) return;
       console.error('Failed to load recommended tracks:', err);
       setPlaylistsError("Couldn't load recommendations right now.");
     } finally {
-      setPlaylistsLoading(false);
+      if (!isCancelled()) setPlaylistsLoading(false);
     }
-  }, []);
+  }, [playTrack]);
 
-  const loadLastLiked = useCallback(async () => {
+  const loadLastLiked = useCallback(async (isCancelled = () => false) => {
     setLastLikedLoading(true);
     try {
       const res = await musicAPI.getLikedSongs(1);
+      if (isCancelled()) return;
       const songs = res.liked_songs || [];
       if (songs.length > 0) {
         const s = songs[0];
@@ -175,25 +221,32 @@ const Dashboard = () => {
         setLastLiked(null);
       }
     } catch (err) {
+      if (isCancelled()) return;
       console.error('Failed to load liked songs:', err);
       setLastLiked(null);
     } finally {
-      setLastLikedLoading(false);
+      if (!isCancelled()) setLastLikedLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadRecentDetections();
-    loadPlaylists();
-    loadLastLiked();
+    let cancelled = false;
+    const isCancelled = () => cancelled;
+
+    loadRecentDetections(isCancelled);
+    loadPlaylists(isCancelled);
+    loadLastLiked(isCancelled);
 
     setStreakLoading(true);
     Promise.allSettled([emotionAPI.getStreak(), emotionAPI.getLongestStreak()])
       .then(([currentRes, longestRes]) => {
+        if (cancelled) return;
         if (currentRes.status === 'fulfilled') setCurrentStreak(currentRes.value.day_streak ?? 0);
         if (longestRes.status === 'fulfilled') setLongestStreak(longestRes.value.longest_streak ?? 0);
       })
-      .finally(() => setStreakLoading(false));
+      .finally(() => { if (!cancelled) setStreakLoading(false); });
+
+    return () => { cancelled = true; };
   }, [loadRecentDetections, loadPlaylists, loadLastLiked]);
 
   // Notification bell badge — load on mount, then refresh periodically and
@@ -373,7 +426,15 @@ const Dashboard = () => {
             <div className="db-recommended">
               <div className="db-recommended-header">
                 <h2>Recommended For You</h2>
-                <a href="/profile" onClick={(e) => { e.preventDefault(); navigate('/profile'); }}>View All</a>
+                <a
+                  href="/app/detect"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/app/detect', { state: { method: 'select', emotion: playlistsMood } });
+                  }}
+                >
+                  View All
+                </a>
               </div>
               <p>Based on your {playlistsMood} vibe</p>
 

@@ -1,6 +1,19 @@
 import axios from 'axios';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://127.0.0.1:5000/api';
+const getDefaultApiBase = () => {
+  if (typeof window === 'undefined') {
+    return 'http://localhost:5000/api';
+  }
+
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:5000/api';
+  }
+
+  return '/api';
+};
+
+const API_BASE = process.env.REACT_APP_API_URL || getDefaultApiBase();
 export const API_ROOT = API_BASE.replace(/\/api\/?$/, '');
 
 // Create axios instance
@@ -9,15 +22,11 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      const cleanToken = token.trim().replace(/^["']|["']$/g, '');
-      config.headers.Authorization = `Bearer ${cleanToken}`;
-    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -26,25 +35,18 @@ api.interceptors.request.use(
 let isRefreshing = false;
 let refreshSubscribers = [];
 
-const onRefreshed = (newToken) => {
-  refreshSubscribers.forEach((callback) => callback(newToken));
+const onRefreshed = () => {
+  refreshSubscribers.forEach((callback) => callback());
   refreshSubscribers = [];
 };
 
 const refreshAccessToken = async () => {
-  const refreshToken = localStorage.getItem('refresh_token');
-  if (!refreshToken) return null;
-
   try {
-    const response = await axios.post(`${API_BASE}/auth/refresh`, {}, {
-      headers: { Authorization: `Bearer ${refreshToken}` },
-    });
-    const newToken = response.data.access_token;
-    localStorage.setItem('access_token', newToken);
-    return newToken;
+    await axios.post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true });
+    return true;
   } catch (err) {
     console.error('Token refresh failed:', err);
-    return null;
+    return false;
   }
 };
 
@@ -66,6 +68,8 @@ api.interceptors.response.use(
       '/auth/reset-password',
       '/auth/refresh',
       '/auth/google/token',
+      '/auth/google/login',
+      '/auth/google/callback',
     ];
     const isNoAuthEndpoint = noAuthRequiredPaths.some((path) =>
       originalRequest?.url?.includes(path)
@@ -78,8 +82,7 @@ api.interceptors.response.use(
       if (isRefreshing) {
         // Wait for the in-flight refresh to finish, then retry with the new token
         return new Promise((resolve) => {
-          refreshSubscribers.push((newToken) => {
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          refreshSubscribers.push(() => {
             resolve(api(originalRequest));
           });
         });
@@ -90,17 +93,20 @@ api.interceptors.response.use(
       isRefreshing = false;
 
       if (newToken) {
-        onRefreshed(newToken);
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        onRefreshed(true);
         return api(originalRequest);
       }
 
-      // Refresh failed — session is truly dead, log out
+      // Refresh failed — session is truly dead, log out only when we are on a
+      // protected route and the user actually had a session to begin with.
       console.error('❌ Session expired, logging out');
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
-      window.location.href = '/login?error=session_expired';
+      const hadSession = !!localStorage.getItem('auth_session') || !!localStorage.getItem('user');
+      const isOAuthCallbackRoute = window.location.pathname.includes('/auth/callback');
+      if (hadSession && !isOAuthCallbackRoute && !window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+        localStorage.removeItem('auth_session');
+        localStorage.removeItem('user');
+        window.location.href = '/login?error=session_expired';
+      }
       return Promise.reject(error);
     }
 
@@ -156,30 +162,16 @@ export const authAPI = {
 
 export const spotifyConnectAPI = {
   // Redirect browser to backend, which redirects to Spotify consent screen.
-  // This is a full-page navigation (not an axios call), so the request
-  // interceptor's auto-refresh can't help here — we proactively refresh
-  // the token first if it's close to expiring, then pass it via query param.
+  // The backend reads the auth cookie directly, so the browser can navigate
+  // without any JWT query string.
   connect: async () => {
-    let token = localStorage.getItem('access_token');
-
-    // Always refresh right before this redirect — cheap and avoids
-    // sending a token that's seconds away from expiring.
-    const refreshToken = localStorage.getItem('refresh_token');
-    if (refreshToken) {
-      try {
-        const refreshed = await api.post('/auth/refresh', {}, {
-          headers: { Authorization: `Bearer ${refreshToken}` },
-        });
-        if (refreshed.data?.access_token) {
-          token = refreshed.data.access_token;
-          localStorage.setItem('access_token', token);
-        }
-      } catch (err) {
-        console.error('Could not refresh token before Spotify connect:', err);
-      }
+    try {
+      await api.post('/auth/refresh', {}, { withCredentials: true });
+    } catch (err) {
+      console.error('Could not refresh token before Spotify connect:', err);
     }
 
-    window.location.href = `${API_ROOT}/api/auth/spotify/login?jwt=${encodeURIComponent(token || '')}`;
+    window.location.href = `${API_ROOT}/api/auth/spotify/login`;
   },
 
   getStatus: async () => {
@@ -205,15 +197,13 @@ export const emotionAPI = {
     const formData = new FormData();
     formData.append('image', imageFile);
 
-    const token = localStorage.getItem('access_token');
-
     const response = await axios.post(
       `${API_BASE}/emotion/detect-upload`,
       formData,
       {
+        withCredentials: true,
         headers: {
           'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}`
         },
       }
     );
@@ -259,8 +249,8 @@ export const emotionAPI = {
 // ==================== MUSIC ====================
 
 export const musicAPI = {
-  getRecommendations: async (emotion, language = 'english', limit = 6, excludeIds = [], sort = 'relevance') => {
-    const params = { language, limit, sort };
+  getRecommendations: async (emotion, language = 'english', limit = 6, excludeIds = [], sort = 'relevance', explicitContent = true) => {
+    const params = { language, limit, sort, explicit_content: explicitContent };
     if (excludeIds.length > 0) {
       params.exclude_ids = excludeIds.join(',');
     }
@@ -465,9 +455,9 @@ export const userAPI = {
 
 export const setAuthToken = (token) => {
   if (token) {
-    localStorage.setItem('access_token', token);
+    localStorage.setItem('auth_session', '1');
   } else {
-    localStorage.removeItem('access_token');
+    localStorage.removeItem('auth_session');
   }
 };
 
@@ -490,12 +480,22 @@ export const getUser = () => {
 };
 
 export const isAuthenticated = () => {
-  return !!localStorage.getItem('access_token');
+  const hasSessionMarker = !!localStorage.getItem('auth_session') || !!localStorage.getItem('user');
+
+  // The auth cookies are HttpOnly, so the browser cannot expose them to
+  // JavaScript. Relying on document.cookie here makes the app think the user
+  // is logged out even when the backend has already accepted the session.
+  return hasSessionMarker;
 };
 
-export const logout = () => {
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
+export const logout = async () => {
+  try {
+    await api.post('/auth/logout', {}, { withCredentials: true });
+  } catch (err) {
+    console.error('Logout request failed:', err);
+  }
+
+  localStorage.removeItem('auth_session');
   localStorage.removeItem('user');
   window.location.href = '/login';
 };
